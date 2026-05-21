@@ -23,6 +23,7 @@ export const helpCommand: BotCommand = {
         "`/tickets` - erstellt ein Support-Ticket-Panel.",
         "`/creator-panel` - erstellt Creator-Buttons fuer Streams, Videos und Updates.",
         "`/roles` - erstellt Rollenbuttons fuer Community- und Interessenrollen.",
+        "`/giveaway` - erstellt ein einfaches Giveaway.",
         "`/clear` - loescht Nachrichten.",
         "`/timeout` - setzt einen Nutzer in Timeout.",
         "`/kick` - kickt einen Nutzer.",

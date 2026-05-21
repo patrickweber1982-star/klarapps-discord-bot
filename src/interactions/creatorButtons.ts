@@ -119,16 +119,19 @@ async function announceGiveaway(interaction: ButtonInteraction) {
     embeds: [
       giveawayEmbed(
         [
-          "Reagiere oder klicke, um teilzunehmen.",
+          "Nutze `/giveaway`, um ein echtes Giveaway mit Teilnahmebutton und Gewinnerauswahl zu erstellen.",
           "",
-          "Dieses Giveaway-Panel ist vorbereitet. Auswertung, Laufzeit und Gewinnerlogik folgen in einer späteren Version.",
+          "Beispiel: `/giveaway prize:Discord Nitro duration_minutes:10 winners:1`",
+          "",
+          "Creator-Backend, Vorlagen und Plattform-Integrationen folgen später.",
         ].join("\n"),
-        "🎁 Giveaway gestartet",
+        "🎁 Giveaway vorbereiten",
       ),
     ],
+    ephemeral: true,
   });
 
-  logger.creator(`Giveaway gestartet von ${interaction.user.tag}`);
+  logger.creator(`Giveaway-Hinweis angezeigt fuer ${interaction.user.tag}`);
 }
 
 async function announceCommunityUpdate(interaction: ButtonInteraction) {

@@ -52,6 +52,7 @@ Aktuell werden diese Commands registriert:
 /tickets -> Erstellt ein Ticket-Panel fuer Support, Bugs und Feature-Wuensche.
 /creator-panel -> Erstellt ein Creator-Panel fuer Streams, Videos, Giveaways und Updates.
 /roles -> Erstellt ein Rollen-Panel fuer Community-, Interessen- und Update-Rollen.
+/giveaway -> Erstellt ein einfaches Giveaway.
 /clear -> Loescht Nachrichten.
 /timeout -> Setzt einen Nutzer in Timeout.
 /kick -> Kickt einen Nutzer.
@@ -88,13 +89,14 @@ src/
 
 - Modularer Command Handler mit zentraler Command-Map.
 - Event Handler fuer `ready` und `interactionCreate`, vorbereitet fuer weitere Events wie `guildMemberAdd`.
-- Logger mit `info`, `success`, `moderation`, `creator`, `roles`, `warn`, `error` und `debug`.
+- Logger mit `info`, `success`, `moderation`, `creator`, `roles`, `giveaway`, `warn`, `error` und `debug`.
 - Config-System mit Validierung fuer `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID` und `DISCORD_GUILD_ID`.
 - Globales Error Handling fuer `unhandledRejection` und `uncaughtException`.
 - Interaction-Fehler werden sauber als KlarBot-Embed beantwortet, damit keine Discord-Fehlermeldung stehen bleibt.
 - Permission-Helfer fuer Admin, Server-Owner, Teamrollen, Moderation und `ManageGuild`.
 - KlarApps/KlarBot Embed-Helfer fuer `info`, `success`, `warning`, `error`, `moderation`, `punishment` und `onboarding`.
 - Creator-Embed-Helfer fuer `creator`, `livestream`, `video` und `giveaway`.
+- Giveaway-Embed-Helfer fuer `giveaway` und `giveawayWinner`.
 - Rollen-Embed-Helfer fuer `roles` und `community`.
 - Bot Presence wird im `ready` Event gesetzt und rotiert zwischen KlarApps-Systemstatus, Hilfe und Community-Hinweisen.
 - UI-Component-Helfer fuer Buttons, Dropdowns und Modals.
@@ -109,6 +111,7 @@ Terminal-Logs folgen einem einheitlichen Format:
 [KlarBot] [MODERATION] Nachrichten gelöscht
 [KlarBot] [CREATOR] Stream-Ankündigung erstellt
 [KlarBot] [ROLES] Rolle vergeben
+[KlarBot] [GIVEAWAY] Gewinner gezogen
 [KlarBot] [ERROR] Permission fehlgeschlagen
 ```
 
@@ -271,10 +274,32 @@ Das Panel enthaelt vier Buttons:
 
 - `🔴 Stream ankündigen` erstellt ein `LIVE NOW` Embed mit Stream-Hinweis und Platzhalter-Link. Twitch/YouTube-Verbindung folgt später.
 - `📹 Neues Video` erstellt ein Video-Embed mit Platzhalter-Link. Twitch/YouTube-Verbindung folgt später.
-- `🎁 Giveaway` erstellt ein einfaches Giveaway-Embed als Vorbereitung, ohne Auswertung oder Datenbank.
+- `🎁 Giveaway` weist auf `/giveaway` hin. Ein Creator-Backend folgt spaeter.
 - `📢 Community Update` erstellt ein kurzes Update-Embed fuer Ankuendigungen.
 
 Creator-Aktionen werden im Terminal mit `[KlarBot] [CREATOR]` geloggt. Es gibt noch keine Twitch-/YouTube-Anbindung, keine Datenbank und keine automatische Link-Verwaltung. Stream- und Video-Links sind aktuell klar als Platzhalter markiert, bis spaeter Modals oder konfigurierte Creator-Profile ergaenzt werden.
+
+## Giveaway BASIC
+
+`/giveaway` erstellt ein einfaches, mobiles Giveaway fuer Creator und Community-Server. Der Command darf von Administratoren und KlarApps-Teamrollen genutzt werden.
+
+Parameter:
+
+- `prize` ist der Preis.
+- `duration_minutes` ist die Laufzeit in Minuten.
+- `winners` ist optional und standardmaessig `1`.
+
+Beispiel:
+
+```txt
+/giveaway prize:"Discord Nitro" duration_minutes:10 winners:1
+```
+
+KlarBot postet ein Giveaway-Embed mit Preis, Gewinneranzahl, Endzeit und Veranstalter. Nutzer nehmen ueber `🎉 Teilnehmen` teil. Doppelte Teilnahme wird verhindert und immer ephemeral beantwortet.
+
+Nach Ablauf zieht KlarBot zufaellige Gewinner und postet ein Ergebnis-Embed im Channel. Wenn niemand teilgenommen hat, wird `Keine gültigen Teilnehmer.` angezeigt.
+
+Das System arbeitet bewusst nur in-memory. Nach einem Bot-Neustart sind aktive Giveaways nicht mehr bekannt. Es gibt keine Datenbank, keine API und kein Webpanel.
 
 ## Rollenbuttons BASIC
 

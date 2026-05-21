@@ -3,6 +3,7 @@ import type { ChatInputCommandInteraction, Interaction } from "discord.js";
 import type { BotConfig } from "../config/env.js";
 import type { BotCommand } from "../types/command.js";
 import { handleCreatorButton } from "./creatorButtons.js";
+import { handleGiveawayButton } from "./giveawayButtons.js";
 import { handleHelpButton } from "./helpButtons.js";
 import { handleOnboardingButton } from "./onboardingButtons.js";
 import { handleRoleButton } from "./roleButtons.js";
@@ -48,6 +49,10 @@ export async function routeInteraction(interaction: Interaction, options: Intera
       }
 
       if (await handleRoleButton(interaction)) {
+        return;
+      }
+
+      if (await handleGiveawayButton(interaction)) {
         return;
       }
     } catch (error) {
