@@ -8,6 +8,8 @@ import { ticketStaffRoleNames } from "../../config/roles.js";
 import type { BotCommand } from "../../types/command.js";
 import { errorEmbed, successEmbed, warningEmbed } from "../../utils/embeds.js";
 import { botPermissionMessage, hasAdministrator } from "../../utils/permissions.js";
+import { buildFeatureUnavailableEmbed, canUseFeature } from "../plans/featureGuard.js";
+import { DEFAULT_PLAN } from "../plans/planConfig.js";
 import { resetKlarBotServer, type ResetResult } from "./resetService.js";
 
 const allowedResetRoleNames = [
@@ -30,6 +32,14 @@ export const resetServerCommand: BotCommand = {
     if (!interaction.guild) {
       await interaction.reply({
         embeds: [errorEmbed("Dieser Command kann nur auf einem Discord-Server genutzt werden.")],
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (!canUseFeature(DEFAULT_PLAN, "resetServer")) {
+      await interaction.reply({
+        embeds: [buildFeatureUnavailableEmbed("resetServer", DEFAULT_PLAN)],
         ephemeral: true,
       });
       return;

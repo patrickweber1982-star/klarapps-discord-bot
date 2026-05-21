@@ -11,6 +11,7 @@ type LogLevel =
   | "transcript"
   | "faq"
   | "reset"
+  | "plan"
   | "warn"
   | "error"
   | "debug";
@@ -28,6 +29,7 @@ const levelColors: Record<LogLevel, string> = {
   transcript: "\x1b[92m",
   faq: "\x1b[36m",
   reset: "\x1b[91m",
+  plan: "\x1b[94m",
   warn: "\x1b[33m",
   error: "\x1b[31m",
   debug: "\x1b[90m",
@@ -46,6 +48,7 @@ const levelLabels: Record<LogLevel, string> = {
   transcript: "TRANSCRIPT",
   faq: "FAQ",
   reset: "RESET",
+  plan: "PLAN",
   warn: "WARN",
   error: "ERROR",
   debug: "DEBUG",
@@ -124,6 +127,10 @@ export const logger = {
 
   reset(message: string, meta?: unknown) {
     writeLog("reset", console.info, message, meta);
+  },
+
+  plan(message: string, meta?: unknown) {
+    writeLog("plan", console.info, message, meta);
   },
 
   warn(message: string, meta?: unknown) {

@@ -1,6 +1,8 @@
 import { ActionRowBuilder, SlashCommandBuilder, type ButtonBuilder, type TextChannel } from "discord.js";
 
 import { buildGiveawayJoinButtonId } from "../config/giveaways.js";
+import { buildFeatureUnavailableEmbed, canUseFeature } from "../features/plans/featureGuard.js";
+import { DEFAULT_PLAN } from "../features/plans/planConfig.js";
 import type { BotCommand } from "../types/command.js";
 import { primaryButton } from "../utils/components.js";
 import { errorEmbed, giveawayEmbed } from "../utils/embeds.js";
@@ -38,6 +40,14 @@ export const giveawayCommand: BotCommand = {
     if (!interaction.guild) {
       await interaction.reply({
         embeds: [errorEmbed("Dieser Command kann nur auf einem Discord-Server genutzt werden.")],
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (!canUseFeature(DEFAULT_PLAN, "giveaways")) {
+      await interaction.reply({
+        embeds: [buildFeatureUnavailableEmbed("giveaways", DEFAULT_PLAN)],
         ephemeral: true,
       });
       return;

@@ -22,6 +22,8 @@ import {
   type SetupAccess,
 } from "../config/channels.js";
 import { onboardingButtonIds } from "../config/onboarding.js";
+import { buildFeatureUnavailableEmbed, canUseFeature } from "../features/plans/featureGuard.js";
+import { DEFAULT_PLAN } from "../features/plans/planConfig.js";
 import {
   buildKlarBotGuideEmbed,
   buildRolesOverviewEmbed,
@@ -88,7 +90,23 @@ export const setupCommand: BotCommand = {
 
     const templateInput = interaction.options.getString("templates");
 
+    if (!canUseFeature(DEFAULT_PLAN, "setup")) {
+      await interaction.reply({
+        embeds: [buildFeatureUnavailableEmbed("setup", DEFAULT_PLAN)],
+        ephemeral: true,
+      });
+      return;
+    }
+
     if (templateInput) {
+      if (!canUseFeature(DEFAULT_PLAN, "creatorTemplates")) {
+        await interaction.reply({
+          embeds: [buildFeatureUnavailableEmbed("creatorTemplates", DEFAULT_PLAN)],
+          ephemeral: true,
+        });
+        return;
+      }
+
       if (!(await canUseTemplateBuilder(interaction))) {
         await interaction.reply({
           embeds: [

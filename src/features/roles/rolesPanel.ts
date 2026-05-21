@@ -9,6 +9,8 @@ import {
 import type { BotCommand } from "../../types/command.js";
 import { errorEmbed, rolesEmbed } from "../../utils/embeds.js";
 import { hasAdministrator } from "../../utils/permissions.js";
+import { buildFeatureUnavailableEmbed, canUseFeature } from "../plans/featureGuard.js";
+import { DEFAULT_PLAN } from "../plans/planConfig.js";
 import {
   getSelfAssignableRolesByCategory,
   SELF_ASSIGNABLE_ROLES,
@@ -25,6 +27,14 @@ export const rolesPanelCommand: BotCommand = {
     if (!interaction.guild) {
       await interaction.reply({
         embeds: [errorEmbed("Dieser Command kann nur auf einem Discord-Server genutzt werden.")],
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (!canUseFeature(DEFAULT_PLAN, "rolesPanel")) {
+      await interaction.reply({
+        embeds: [buildFeatureUnavailableEmbed("rolesPanel", DEFAULT_PLAN)],
         ephemeral: true,
       });
       return;

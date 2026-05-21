@@ -123,6 +123,7 @@ Terminal-Logs folgen einem einheitlichen Format:
 [KlarBot] [TRANSCRIPT] transcript created
 [KlarBot] [FAQ] faq embed sent
 [KlarBot] [RESET] reset completed
+[KlarBot] [PLAN] feature allowed
 [KlarBot] [ERROR] Permission fehlgeschlagen
 ```
 
@@ -138,6 +139,32 @@ Beim Start zeigt KlarBot im Terminal:
 - erfolgreichen Start
 
 Die Presence startet mit `KlarApps Systeme aktiv` und rotiert danach zwischen weiteren kurzen Statusmeldungen.
+
+## Free / BASIC / PRO Vorbereitung
+
+KlarBot hat eine lokale Plan-Architektur, aber noch kein echtes Lizenzsystem. Aktuell ist `DEFAULT_PLAN` auf `basic` gesetzt, damit alle bestehenden BASIC-Funktionen weiterhin funktionieren.
+
+Plan-Struktur:
+
+- `free`: Setup, Verify, Welcome, Voice, FAQ und Help.
+- `basic`: alle FREE-Funktionen plus Tickets, Ticket-Logs, Transcripts, Giveaways, Rollenpanel, Auto-Roles, Creator Templates, Moderation und Server Reset.
+- `pro`: Platzhalter fuer spaetere Features wie Advanced Automations, App Sync, Analytics, AI Tools und Cloud Backup.
+
+Feature-Guard:
+
+- `canUseFeature(plan, feature)` prueft lokal, ob ein Feature fuer einen Plan erlaubt ist.
+- Unbekannte Features und unbekannte Plaene geben `false` zurueck und werden mit `[KlarBot] [PLAN]` geloggt.
+- Vorbereitet sind Guard-Checks fuer `/tickets`, `/giveaway`, `/roles-panel`, `/reset-server` und Creator Templates in `/setup`.
+
+Dateien:
+
+- `src/features/plans/planTypes.ts`
+- `src/features/plans/featureFlags.ts`
+- `src/features/plans/planConfig.ts`
+- `src/features/plans/featureGuard.ts`
+- `src/features/plans/planLogger.ts`
+
+Noch nicht enthalten: Lizenzpruefung, Datenbank, Dashboard, Stripe, Discord OAuth, Serverbindung oder echte Planverwaltung.
 
 ## Permissions
 

@@ -1,6 +1,8 @@
 import { ActionRowBuilder, PermissionFlagsBits, SlashCommandBuilder, type ButtonBuilder } from "discord.js";
 
 import { ticketButtonIds, ticketTypes } from "../config/tickets.js";
+import { buildFeatureUnavailableEmbed, canUseFeature } from "../features/plans/featureGuard.js";
+import { DEFAULT_PLAN } from "../features/plans/planConfig.js";
 import type { BotCommand } from "../types/command.js";
 import { primaryButton, secondaryButton } from "../utils/components.js";
 import { infoEmbed } from "../utils/embeds.js";
@@ -16,6 +18,14 @@ export const ticketsCommand: BotCommand = {
     if (!interaction.guild) {
       await interaction.reply({
         content: "Dieser Command kann nur auf einem Discord-Server genutzt werden.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (!canUseFeature(DEFAULT_PLAN, "tickets")) {
+      await interaction.reply({
+        embeds: [buildFeatureUnavailableEmbed("tickets", DEFAULT_PLAN)],
         ephemeral: true,
       });
       return;
