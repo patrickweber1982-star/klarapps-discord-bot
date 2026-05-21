@@ -59,7 +59,7 @@ async function openTicket(interaction: ButtonInteraction, ticketType: TicketType
   }
 
   const ticketChannel = await createTicketChannel(interaction.guild, member, definition);
-  logger.info(`Ticket erstellt: ${ticketChannel.name} (${definition.type}) fuer ${interaction.user.tag}`);
+  logger.success(`Ticket erstellt: ${ticketChannel.name} (${definition.type}) fuer ${interaction.user.tag}`);
 
   const closeRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
     secondaryButton(ticketButtonIds.claim, "📌 Claim"),
@@ -113,7 +113,7 @@ async function closeTicket(interaction: ButtonInteraction) {
     embeds: [successEmbed("Ticket wird geschlossen...")],
   });
 
-  logger.info(`Ticket geschlossen: ${interaction.channel.name} von ${interaction.user.tag}`);
+  logger.success(`Ticket geschlossen: ${interaction.channel.name} von ${interaction.user.tag}`);
   await wait(5000);
   await interaction.channel.delete("KlarBot Ticket geschlossen");
 }

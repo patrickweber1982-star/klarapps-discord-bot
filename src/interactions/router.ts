@@ -6,7 +6,10 @@ import { handleHelpButton } from "./helpButtons.js";
 import { handleOnboardingButton } from "./onboardingButtons.js";
 import { handleTicketButton } from "./ticketButtons.js";
 import { handleVerifyButton } from "./verifyButton.js";
-import { replyWithInteractionError } from "../utils/errors.js";
+import {
+  replyWithInteractionError,
+  replyWithUnknownInteraction,
+} from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 
 type InteractionRouterOptions = {
@@ -44,26 +47,23 @@ export async function routeInteraction(interaction: Interaction, options: Intera
     }
 
     logger.warn(`Unbekannte Button-Interaction empfangen: ${interaction.customId}`);
-    await interaction.reply({
-      content: "Diese Schaltflaeche ist noch nicht verfuegbar.",
-      ephemeral: true,
-    });
+    await replyWithUnknownInteraction(interaction, "Diese Schaltfläche ist nicht mehr aktiv oder gehört zu einer späteren KlarBot-Funktion.");
     return;
   }
 
   if (interaction.isStringSelectMenu()) {
     logger.warn(`Unbekanntes Dropdown empfangen: ${interaction.customId}`);
-    await interaction.reply({ content: "Diese Auswahl ist noch nicht verfuegbar.", ephemeral: true });
+    await replyWithUnknownInteraction(interaction, "Diese Auswahl ist aktuell nicht verfügbar.");
     return;
   }
 
   if (interaction.isModalSubmit()) {
     logger.warn(`Unbekanntes Modal empfangen: ${interaction.customId}`);
-    await interaction.reply({ content: "Dieses Formular ist noch nicht verfuegbar.", ephemeral: true });
+    await replyWithUnknownInteraction(interaction, "Dieses Formular ist aktuell nicht verfügbar.");
     return;
   }
 
-  logger.debug(`Nicht unterstuetzte Interaction empfangen: ${interaction.type}`);
+  logger.warn(`Nicht unterstützte Interaction empfangen: ${interaction.type}`);
 }
 
 async function routeSlashCommand(
@@ -74,19 +74,27 @@ async function routeSlashCommand(
 
   if (!command) {
     logger.warn(`Unbekannter Slash Command empfangen: /${interaction.commandName}`);
-    await interaction.reply({ content: "Unbekannter Command.", ephemeral: true });
+    await replyWithUnknownInteraction(interaction, "Dieser Command ist in KlarBot nicht registriert. Nutze `/help` für die aktuelle Übersicht.");
     return;
   }
 
   try {
     logger.info(`Slash Command empfangen: /${interaction.commandName}`);
-    await command.execute({
-      interaction,
-      config: options.config,
-      logger,
-    });
+    await executeCommandSafely(command, interaction, options);
   } catch (error) {
     logger.error(`Fehler beim Slash Command /${interaction.commandName}`, error);
     await replyWithInteractionError(interaction);
   }
+}
+
+async function executeCommandSafely(
+  command: BotCommand,
+  interaction: ChatInputCommandInteraction,
+  options: InteractionRouterOptions,
+) {
+  await command.execute({
+    interaction,
+    config: options.config,
+    logger,
+  });
 }

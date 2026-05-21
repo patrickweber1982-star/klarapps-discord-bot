@@ -4,7 +4,7 @@ import type { BotCommand } from "../types/command.js";
 import { canActOnMember } from "../utils/moderation.js";
 import { errorEmbed, moderationEmbed, successEmbed } from "../utils/embeds.js";
 import { logModerationAction } from "../utils/moderationLogs.js";
-import { canUseModeration } from "../utils/permissions.js";
+import { botPermissionMessage, canUseModeration, moderationPermissionMessage } from "../utils/permissions.js";
 
 export const timeoutCommand: BotCommand = {
   name: "timeout",
@@ -32,7 +32,7 @@ export const timeoutCommand: BotCommand = {
     }
 
     if (!(await canUseModeration(interaction))) {
-      await interaction.reply({ embeds: [errorEmbed("Du darfst diesen Moderationscommand nicht nutzen.")], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed(moderationPermissionMessage())], ephemeral: true });
       return;
     }
 
@@ -56,7 +56,7 @@ export const timeoutCommand: BotCommand = {
     }
 
     if (!target.moderatable) {
-      await interaction.reply({ embeds: [errorEmbed("KlarBot kann diesen Nutzer nicht in Timeout setzen. Bitte pruefe Bot-Rolle und Berechtigungen.")], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed(botPermissionMessage("Nutzer in Timeout setzen"))], ephemeral: true });
       return;
     }
 

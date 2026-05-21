@@ -4,7 +4,7 @@ import { ticketButtonIds, ticketTypes } from "../config/tickets.js";
 import type { BotCommand } from "../types/command.js";
 import { primaryButton, secondaryButton } from "../utils/components.js";
 import { infoEmbed } from "../utils/embeds.js";
-import { hasAdministrator, hasManageGuild } from "../utils/permissions.js";
+import { hasAdministrator, hasManageGuild, manageGuildPermissionMessage } from "../utils/permissions.js";
 
 export const ticketsCommand: BotCommand = {
   name: "tickets",
@@ -23,7 +23,7 @@ export const ticketsCommand: BotCommand = {
 
     if (!hasAdministrator(interaction) && !hasManageGuild(interaction)) {
       await interaction.reply({
-        content: "Nur Administratoren oder Nutzer mit Server-verwalten-Recht duerfen /tickets nutzen.",
+        content: manageGuildPermissionMessage(),
         ephemeral: true,
       });
       return;

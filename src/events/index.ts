@@ -12,6 +12,6 @@ type RegisterEventsOptions = {
 };
 
 export function registerEvents(options: RegisterEventsOptions) {
-  registerReadyEvent(options.client);
+  registerReadyEvent({ client: options.client, commands: options.commands });
   registerInteractionCreateEvent(options);
 }

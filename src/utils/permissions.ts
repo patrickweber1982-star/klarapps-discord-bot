@@ -4,16 +4,21 @@ import {
   type GuildMember,
 } from "discord.js";
 
-import { moderationRoleNames } from "../config/roles.js";
+import { moderationRoleNames, ticketStaffRoleNames } from "../config/roles.js";
+
+function hasPermission(
+  interaction: ChatInputCommandInteraction,
+  permission: bigint,
+) {
+  return Boolean(interaction.memberPermissions?.has(permission));
+}
 
 export function hasAdministrator(interaction: ChatInputCommandInteraction) {
-  return Boolean(
-    interaction.memberPermissions?.has(PermissionsBitField.Flags.Administrator),
-  );
+  return hasPermission(interaction, PermissionsBitField.Flags.Administrator);
 }
 
 export function hasManageGuild(interaction: ChatInputCommandInteraction) {
-  return Boolean(interaction.memberPermissions?.has(PermissionsBitField.Flags.ManageGuild));
+  return hasPermission(interaction, PermissionsBitField.Flags.ManageGuild);
 }
 
 export async function isGuildOwner(interaction: ChatInputCommandInteraction) {
@@ -33,6 +38,12 @@ export async function canManageKlarBot(interaction: ChatInputCommandInteraction)
   );
 }
 
+export function hasTeamRole(member: GuildMember) {
+  return ticketStaffRoleNames.some((roleName) =>
+    member.roles.cache.some((role) => role.name === roleName),
+  );
+}
+
 export function hasModerationRole(member: GuildMember) {
   return moderationRoleNames.some((roleName) =>
     member.roles.cache.some((role) => role.name === roleName),
@@ -49,5 +60,17 @@ export async function canUseModeration(interaction: ChatInputCommandInteraction)
   }
 
   const member = await interaction.guild.members.fetch(interaction.user.id);
-  return hasModerationRole(member);
+  return hasTeamRole(member) || hasModerationRole(member);
+}
+
+export function moderationPermissionMessage() {
+  return "Du brauchst Administratorrechte oder eine KlarApps-Teamrolle, um diesen Moderationscommand zu nutzen.";
+}
+
+export function manageGuildPermissionMessage() {
+  return "Du brauchst Administratorrechte oder die Berechtigung Server verwalten, um diese Aktion auszuführen.";
+}
+
+export function botPermissionMessage(action: string) {
+  return `KlarBot fehlen Berechtigungen für: ${action}. Bitte prüfe Bot-Rolle, Rollenposition und Discord-Berechtigungen.`;
 }

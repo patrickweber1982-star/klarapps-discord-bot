@@ -3,7 +3,7 @@ import { SlashCommandBuilder } from "discord.js";
 import type { BotCommand } from "../types/command.js";
 import { errorEmbed, successEmbed } from "../utils/embeds.js";
 import { logModerationAction } from "../utils/moderationLogs.js";
-import { canUseModeration } from "../utils/permissions.js";
+import { canUseModeration, moderationPermissionMessage } from "../utils/permissions.js";
 
 export const clearCommand: BotCommand = {
   name: "clear",
@@ -25,7 +25,7 @@ export const clearCommand: BotCommand = {
     }
 
     if (!(await canUseModeration(interaction))) {
-      await interaction.reply({ embeds: [errorEmbed("Du darfst diesen Moderationscommand nicht nutzen.")], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed(moderationPermissionMessage())], ephemeral: true });
       return;
     }
 

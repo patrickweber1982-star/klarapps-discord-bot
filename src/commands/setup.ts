@@ -28,7 +28,8 @@ import {
 } from "../config/roles.js";
 import type { BotCommand } from "../types/command.js";
 import { primaryButton } from "../utils/components.js";
-import { infoEmbed, successEmbed } from "../utils/embeds.js";
+import { infoEmbed, onboardingEmbed, successEmbed } from "../utils/embeds.js";
+import { logger as coreLogger } from "../utils/logger.js";
 import { hasAdministrator } from "../utils/permissions.js";
 
 type SetupResult = {
@@ -77,7 +78,7 @@ export const setupCommand: BotCommand = {
 
     const result = await setupKlarAppsServer(interaction.guild);
 
-    logger.info(
+    logger.success(
       `Setup abgeschlossen: ${result.createdRoles.length} Rollen, ${result.createdCategories.length} Kategorien, ${result.createdChannels.length} Channels, ${result.postedMessages.length} Nachrichten erstellt.`,
     );
 
@@ -117,6 +118,7 @@ async function setupKlarAppsServer(guild: Guild): Promise<SetupResult> {
   await guild.channels.fetch();
 
   const roles = await ensureRoles(guild, result);
+  await ensureRoleOrder(guild);
   const channels = await ensureCategoriesAndChannels(guild, roles, result);
   await ensureSetupMessages(channels, result);
 
@@ -153,6 +155,29 @@ async function ensureRoles(guild: Guild, result: SetupResult): Promise<SetupRole
   };
 }
 
+async function ensureRoleOrder(guild: Guild) {
+  const botMember = guild.members.me ?? (await guild.members.fetchMe().catch(() => null));
+  const highestBotPosition = botMember?.roles.highest.position ?? 1;
+  let nextPosition = Math.max(1, highestBotPosition - 1);
+
+  for (const roleDefinition of setupRoleDefinitions) {
+    const role = guild.roles.cache.find((currentRole) => currentRole.name === roleDefinition.name);
+
+    if (!role || !role.editable) {
+      coreLogger.warn(`Rollenreihenfolge konnte nicht angepasst werden: ${roleDefinition.name}`);
+      continue;
+    }
+
+    await role
+      .setPosition(nextPosition, { reason: "KlarBot Setup: Rollenreihenfolge" })
+      .catch((error) => {
+        coreLogger.warn(`Rollenreihenfolge nicht gesetzt: ${roleDefinition.name}`, error);
+      });
+
+    nextPosition = Math.max(1, nextPosition - 1);
+  }
+}
+
 async function ensureCategoriesAndChannels(
   guild: Guild,
   roles: SetupRoles,
@@ -160,22 +185,24 @@ async function ensureCategoriesAndChannels(
 ) {
   const channels = new Map<string, TextChannel>();
 
-  for (const categoryDefinition of setupCategoryDefinitions) {
+  for (const [categoryIndex, categoryDefinition] of setupCategoryDefinitions.entries()) {
     const category = await ensureCategory(
       guild,
       roles,
       categoryDefinition.name,
       categoryDefinition.access,
+      categoryIndex,
       result,
     );
 
-    for (const channelDefinition of categoryDefinition.channels) {
+    for (const [channelIndex, channelDefinition] of categoryDefinition.channels.entries()) {
       const channel = await ensureTextChannel(
         guild,
         category,
         roles,
         channelDefinition.name,
         channelDefinition.access,
+        channelIndex,
         result,
       );
 
@@ -191,6 +218,7 @@ async function ensureCategory(
   roles: SetupRoles,
   categoryName: string,
   access: SetupAccess,
+  position: number,
   result: SetupResult,
 ) {
   const existingCategory = guild.channels.cache.find(
@@ -203,6 +231,9 @@ async function ensureCategory(
   if (existingCategory) {
     result.reusedCategories.push(categoryName);
     await existingCategory.permissionOverwrites.set(overwrites);
+    await existingCategory.setPosition(position, {
+      reason: "KlarBot Setup: Kategorien sortieren",
+    });
     return existingCategory;
   }
 
@@ -214,6 +245,9 @@ async function ensureCategory(
   });
 
   result.createdCategories.push(categoryName);
+  await category.setPosition(position, {
+    reason: "KlarBot Setup: Kategorien sortieren",
+  });
   return category;
 }
 
@@ -223,6 +257,7 @@ async function ensureTextChannel(
   roles: SetupRoles,
   channelName: string,
   access: SetupAccess,
+  position: number,
   result: SetupResult,
 ) {
   const existingChannel = guild.channels.cache.find((channel): channel is TextChannel => {
@@ -241,6 +276,9 @@ async function ensureTextChannel(
     }
 
     await existingChannel.permissionOverwrites.set(overwrites);
+    await existingChannel.setPosition(position, {
+      reason: "KlarBot Setup: Channels sortieren",
+    });
     return existingChannel;
   }
 
@@ -253,6 +291,9 @@ async function ensureTextChannel(
   });
 
   result.createdChannels.push(channel.name);
+  await channel.setPosition(position, {
+    reason: "KlarBot Setup: Channels sortieren",
+  });
   return channel;
 }
 
@@ -351,13 +392,15 @@ async function ensureRulesMessage(channel: TextChannel | undefined, result: Setu
     onboardingButtonIds.acceptRules,
     {
       embeds: [
-        infoEmbed(
+        onboardingEmbed(
           [
-            "- Sei respektvoll.",
-            "- Kein Spam.",
-            "- Keine Werbung ohne Erlaubnis.",
-            "- Keine beleidigenden Inhalte.",
-            "- Support-Anfragen bitte über Tickets.",
+            "Bitte bestätige die Regeln, bevor du Zugriff auf weitere Bereiche erhältst.",
+            "",
+            "• Sei respektvoll.",
+            "• Kein Spam.",
+            "• Keine Werbung ohne Erlaubnis.",
+            "• Keine beleidigenden Inhalte.",
+            "• Support-Anfragen bitte über Tickets.",
           ].join("\n"),
           "📜 Serverregeln",
         ),
@@ -383,12 +426,14 @@ async function ensureKlarBotGuideMessage(channel: TextChannel | undefined, resul
     onboardingButtonIds.unlockCommunity,
     {
       embeds: [
-        infoEmbed(
+        onboardingEmbed(
           [
-            "`/help` zeigt dir die Übersicht.",
-            "`/tickets` öffnet den Support.",
-            "`/verify` schaltet die Community frei.",
-            "KlarBot hilft bei Serverstruktur, Support und Rollen.",
+            "KlarBot verbindet Serverstruktur, Support und Rollen in einem klaren System.",
+            "",
+            "• `/help` zeigt dir die Übersicht.",
+            "• `/tickets` öffnet den Support.",
+            "• `/verify` schaltet die Community frei.",
+            "• Weitere KlarApps-Funktionen werden modular ergänzt.",
           ].join("\n"),
           "🤖 So funktioniert KlarBot",
         ),
@@ -414,8 +459,12 @@ async function ensureWelcomeMessage(channel: TextChannel | undefined, result: Se
     "klarbot-welcome",
     {
       embeds: [
-        successEmbed(
-          "Willkommen bei KlarApps. Schoen, dass du da bist. Nutze `/help`, um KlarBot kennenzulernen.",
+        onboardingEmbed(
+          [
+            "Willkommen bei KlarApps. Schön, dass du da bist.",
+            "",
+            "Nutze `/help`, um KlarBot kennenzulernen. Für Support und Feedback stehen dir Tickets und Community-Channels zur Verfügung.",
+          ].join("\n"),
           "👋 Willkommen",
         ),
       ],

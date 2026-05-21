@@ -1,8 +1,8 @@
 # KlarApps Discord Bot
 
-KlarBot ist der Discord-Bot fuer KlarApps. Phase 2 stellt ein stabiles Core-System bereit: modulare Commands, Events, Interaction Routing, Config, Logging, Error Handling, Permissions, Embed Design, Bot Status und UI-Component-Helfer.
+KlarBot ist der Discord-Bot fuer KlarApps. Phase 2 stellt ein stabiles Core-System bereit: modulare Commands, Events, Interaction Routing, Config, Logging, Error Handling, Permissions, Embed Design, Presence und UI-Component-Helfer.
 
-Es gibt weiterhin keine Logik fuer echte Kundendaten, Zahlungen, Rollen, Tickets, Datenbanken oder KlarApps-Website/API-Anbindungen.
+Es gibt weiterhin keine Logik fuer echte Kundendaten, Zahlungen, Datenbanken oder KlarApps-Website/API-Anbindungen.
 
 ## Installation
 
@@ -86,19 +86,54 @@ src/
 
 - Modularer Command Handler mit zentraler Command-Map.
 - Event Handler fuer `ready` und `interactionCreate`, vorbereitet fuer weitere Events wie `guildMemberAdd`.
-- Logger mit `info`, `warn`, `error` und `debug`.
+- Logger mit `info`, `success`, `warn`, `error` und `debug`.
 - Config-System mit Validierung fuer `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID` und `DISCORD_GUILD_ID`.
 - Globales Error Handling fuer `unhandledRejection` und `uncaughtException`.
-- Interaction-Fehler werden sauber beantwortet.
-- Permission-Helfer fuer Admin, Server-Owner und `ManageGuild`.
-- KlarApps/KlarBot Embed-Helfer fuer Success, Error und Info.
-- Bot Status wird im `ready` Event auf `KlarApps Systeme` gesetzt.
+- Interaction-Fehler werden sauber als KlarBot-Embed beantwortet, damit keine Discord-Fehlermeldung stehen bleibt.
+- Permission-Helfer fuer Admin, Server-Owner, Teamrollen, Moderation und `ManageGuild`.
+- KlarApps/KlarBot Embed-Helfer fuer `info`, `success`, `warning`, `error`, `moderation` und `onboarding`.
+- Bot Presence wird im `ready` Event gesetzt und rotiert zwischen KlarApps-Systemstatus, Hilfe und Community-Hinweisen.
 - UI-Component-Helfer fuer Buttons, Dropdowns und Modals.
-- Interaction Router fuer Slash Commands, Buttons, Dropdowns und Modals.
+- Interaction Router fuer Slash Commands, Buttons, Dropdowns und Modals inklusive freundlicher Antworten auf unbekannte Interactions.
+
+## Logger, Errors und Presence
+
+Terminal-Logs folgen einem einheitlichen Format:
+
+```txt
+[KlarBot] [SUCCESS] Ticket erstellt
+[KlarBot] [ERROR] Permission fehlgeschlagen
+```
+
+Farben werden in der Console genutzt, sofern sie nicht ueber `NO_COLOR=true` deaktiviert sind. Debug-Logs erscheinen nur mit `DEBUG=true`.
+
+Der Command-Router fuehrt Slash Commands zentral mit Fehlerbehandlung aus. Button-, Dropdown- und Modal-Interactions werden ebenfalls zentral verarbeitet. Unbekannte oder veraltete Interactions antworten freundlich und werden im Terminal geloggt.
+
+Beim Start zeigt KlarBot im Terminal:
+
+- Botname
+- aktive Commands
+- Anzahl verbundener Server
+- erfolgreichen Start
+
+Die Presence startet mit `KlarApps Systeme aktiv` und rotiert danach zwischen weiteren kurzen Statusmeldungen.
+
+## Permissions
+
+Permissions sind zentral in `src/utils/permissions.ts` gebuendelt. Vorbereitet sind:
+
+- Admin Check
+- Manage-Guild Check
+- Server-Owner Check
+- Teamrollen Check
+- Moderationsrechte
+- klare Meldungen bei fehlenden Bot-Rechten
+
+Die Struktur ist bewusst einfach gehalten, damit spaeter Lizenzsysteme, Feature Flags oder Kundenrollen darauf aufbauen koennen.
 
 ## Setup Command und Onboarding
 
-`/setup` erstellt die KlarApps Discordstruktur ohne Duplikate und richtet den Onboarding-Flow ein. Bestehende Rollen, Kategorien, Channels und Setup-Nachrichten werden anhand ihrer Namen, Buttons oder Marker erkannt und wiederverwendet.
+`/setup` erstellt die KlarApps Discordstruktur ohne Duplikate und richtet den Onboarding-Flow ein. Bestehende Rollen, Kategorien, Channels und Setup-Nachrichten werden anhand ihrer Namen, Buttons oder Marker erkannt und wiederverwendet. Kategorien und Channels werden in einer festen KlarApps-Reihenfolge sortiert.
 
 Erstellt werden:
 
@@ -145,7 +180,7 @@ Unter dem Help-Embed stehen vier Buttons:
 
 - `Übersicht`: kurze Erklaerung zu KlarBot.
 - `Setup`: erklaert den `/setup` Command.
-- `Support`: weist darauf hin, dass ein Ticket-System spaeter folgt.
+- `Support`: erklaert den aktuellen Ticket-Einstieg.
 - `Rollen`: erklaert Verify und die spaeter vorbereiteten Rollenbereiche.
 
 ## Verify Command

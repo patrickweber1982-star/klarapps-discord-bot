@@ -4,7 +4,7 @@ import type { BotCommand } from "../types/command.js";
 import { canActOnMember } from "../utils/moderation.js";
 import { errorEmbed, successEmbed } from "../utils/embeds.js";
 import { logModerationAction } from "../utils/moderationLogs.js";
-import { canUseModeration } from "../utils/permissions.js";
+import { botPermissionMessage, canUseModeration, moderationPermissionMessage } from "../utils/permissions.js";
 
 export const kickCommand: BotCommand = {
   name: "kick",
@@ -24,7 +24,7 @@ export const kickCommand: BotCommand = {
     }
 
     if (!(await canUseModeration(interaction))) {
-      await interaction.reply({ embeds: [errorEmbed("Du darfst diesen Moderationscommand nicht nutzen.")], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed(moderationPermissionMessage())], ephemeral: true });
       return;
     }
 
@@ -46,7 +46,7 @@ export const kickCommand: BotCommand = {
     }
 
     if (!target.kickable) {
-      await interaction.reply({ embeds: [errorEmbed("KlarBot kann diesen Nutzer nicht kicken. Bitte pruefe Bot-Rolle und Berechtigungen.")], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed(botPermissionMessage("Nutzer kicken"))], ephemeral: true });
       return;
     }
 

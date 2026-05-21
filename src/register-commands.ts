@@ -11,6 +11,6 @@ await rest.put(Routes.applicationGuildCommands(config.discordClientId, config.di
   body: getCommandPayloads(),
 });
 
-logger.info(
+logger.success(
   `Discord-Commands registriert: ${commandList.map((command) => `/${command.name}`).join(", ")}`,
 );
