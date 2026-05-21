@@ -11,6 +11,10 @@ const klarAppsBrand = {
     moderation: 0x7c3aed,
     punishment: 0xef4444,
     onboarding: 0x14b8a6,
+    creator: 0xec4899,
+    livestream: 0xef4444,
+    video: 0x0ea5e9,
+    giveaway: 0xf59e0b,
   },
 };
 
@@ -51,4 +55,20 @@ export function punishmentEmbed(description: string, title = "Moderationsaktion"
 
 export function onboardingEmbed(description: string, title = "KlarApps Onboarding") {
   return baseEmbed(title, description, "onboarding");
+}
+
+export function creatorEmbed(description: string, title = "Creator Tools") {
+  return baseEmbed(title, description, "creator");
+}
+
+export function livestreamEmbed(description: string, title = "Livestream") {
+  return baseEmbed(title, description, "livestream");
+}
+
+export function videoEmbed(description: string, title = "Video") {
+  return baseEmbed(title, description, "video");
+}
+
+export function giveawayEmbed(description: string, title = "Giveaway") {
+  return baseEmbed(title, description, "giveaway");
 }

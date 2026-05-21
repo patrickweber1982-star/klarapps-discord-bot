@@ -21,6 +21,7 @@ export const helpCommand: BotCommand = {
         "`/help` - zeigt diese Hilfe und das KlarBot Menue.",
         "`/verify` - erstellt ein Verify-Panel fuer neue Mitglieder.",
         "`/tickets` - erstellt ein Support-Ticket-Panel.",
+        "`/creator-panel` - erstellt Creator-Buttons fuer Streams, Videos und Updates.",
         "`/clear` - loescht Nachrichten.",
         "`/timeout` - setzt einen Nutzer in Timeout.",
         "`/kick` - kickt einen Nutzer.",

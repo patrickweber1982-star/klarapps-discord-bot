@@ -1,4 +1,5 @@
 import { clearCommand } from "./clear.js";
+import { creatorPanelCommand } from "./creator-panel.js";
 import { helpCommand } from "./help.js";
 import { kickCommand } from "./kick.js";
 import { klarbotCommand } from "./klarbot.js";
@@ -14,6 +15,7 @@ export const commandList = [
   helpCommand,
   verifyCommand,
   ticketsCommand,
+  creatorPanelCommand,
   clearCommand,
   timeoutCommand,
   kickCommand,

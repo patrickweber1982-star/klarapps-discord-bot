@@ -58,6 +58,14 @@ export function isModerator(member: GuildMember) {
   return hasModerationRole(member);
 }
 
+export function canModerateMember(member: GuildMember) {
+  return (
+    member.permissions.has(PermissionsBitField.Flags.Administrator) ||
+    isTeamMember(member) ||
+    isModerator(member)
+  );
+}
+
 export async function canModerate(interaction: ChatInputCommandInteraction) {
   if (!interaction.guild) {
     return false;
@@ -68,7 +76,7 @@ export async function canModerate(interaction: ChatInputCommandInteraction) {
   }
 
   const member = await interaction.guild.members.fetch(interaction.user.id);
-  return isTeamMember(member) || isModerator(member);
+  return canModerateMember(member);
 }
 
 export async function canUseModeration(interaction: ChatInputCommandInteraction) {
