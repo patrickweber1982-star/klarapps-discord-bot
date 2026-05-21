@@ -23,6 +23,13 @@ export function secondaryButton(customId: string, label: string) {
     .setStyle(ButtonStyle.Secondary);
 }
 
+export function dangerButton(customId: string, label: string) {
+  return new ButtonBuilder()
+    .setCustomId(customId)
+    .setLabel(label)
+    .setStyle(ButtonStyle.Danger);
+}
+
 export function linkButton(label: string, url: string) {
   return new ButtonBuilder().setLabel(label).setURL(url).setStyle(ButtonStyle.Link);
 }

@@ -3,6 +3,7 @@ import type { ChatInputCommandInteraction, Interaction } from "discord.js";
 import type { BotConfig } from "../config/env.js";
 import type { BotCommand } from "../types/command.js";
 import { handleHelpButton } from "./helpButtons.js";
+import { handleTicketButton } from "./ticketButtons.js";
 import { handleVerifyButton } from "./verifyButton.js";
 import { replyWithInteractionError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
@@ -20,6 +21,10 @@ export async function routeInteraction(interaction: Interaction, options: Intera
 
   if (interaction.isButton()) {
     try {
+      if (await handleTicketButton(interaction)) {
+        return;
+      }
+
       if (await handleVerifyButton(interaction)) {
         return;
       }

@@ -49,6 +49,7 @@ Aktuell werden diese Commands registriert:
 /setup -> Erstellt die KlarApps Discord-Grundstruktur. Nur fuer Administratoren.
 /help -> Zeigt die KlarBot Hilfe und verfuegbaren Funktionen.
 /verify -> Erstellt ein Verify-Panel fuer neue Mitglieder.
+/tickets -> Erstellt ein Ticket-Panel fuer Support, Bugs und Feature-Wuensche.
 ```
 
 ## Entwicklung
@@ -127,6 +128,29 @@ Das Panel kann in diesen Channels erstellt werden:
 Nutzer klicken auf `✅ Verifizieren` und erhalten die Rolle `👤 Community`. Wenn die Rolle noch nicht existiert, erstellt KlarBot sie automatisch. Bereits verifizierte Nutzer erhalten keine doppelte Rolle und bekommen eine freundliche Rueckmeldung.
 
 Die Rollenlogik ist modular vorbereitet, damit spaeter Pro-, Beta-, Kunden- und Lizenzrollen sauber ergaenzt werden koennen.
+
+## Ticket-System V1
+
+`/tickets` erstellt ein KlarBot Support-Panel. Der Command darf nur von Administratoren oder Nutzern mit `Manage Guild` genutzt werden.
+
+Das Panel bietet drei Tickettypen:
+
+- `🛠️ Support`
+- `🐞 Bug Report`
+- `💡 Feature-Wunsch`
+
+Beim Klick erstellt KlarBot einen privaten Channel `ticket-username` in der Kategorie `🛠️ SUPPORT`. Wenn die Kategorie fehlt, wird sie automatisch erstellt.
+
+Ticket-Channel sind sichtbar fuer:
+
+- den Ticket-Ersteller
+- `👑 Founder`
+- `🛠️ Developer`
+- `🤝 Moderator`
+
+Normale Community-Mitglieder sehen fremde Tickets nicht. Ein Nutzer kann nicht mehrere offene Tickets des gleichen Typs gleichzeitig erstellen. Tickets koennen ueber `🔒 Ticket schließen` geschlossen werden; KlarBot wartet 5 Sekunden und loescht danach den Channel.
+
+Das Ticket-System V1 nutzt keine Datenbank, kein Webpanel, keine AI und keine Analytics.
 
 ## Geplante Features
 

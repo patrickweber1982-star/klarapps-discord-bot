@@ -1,6 +1,7 @@
 import { helpCommand } from "./help.js";
 import { klarbotCommand } from "./klarbot.js";
 import { setupCommand } from "./setup.js";
+import { ticketsCommand } from "./tickets.js";
 import { verifyCommand } from "./verify.js";
 import type { BotCommand } from "../types/command.js";
 
@@ -9,6 +10,7 @@ export const commandList = [
   setupCommand,
   helpCommand,
   verifyCommand,
+  ticketsCommand,
 ] satisfies BotCommand[];
 
 export function createCommandMap(commands: BotCommand[] = commandList) {

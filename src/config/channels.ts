@@ -1,5 +1,7 @@
 export const verifyPanelChannelNames = ["👋・willkommen", "📜・regeln"] as const;
 
+export const supportCategoryName = "🛠️ SUPPORT";
+
 export const setupCategoryDefinitions = [
   {
     name: "✨ START HERE",
@@ -12,7 +14,7 @@ export const setupCategoryDefinitions = [
     channels: ["💬・allgemein", "🧠・ideen-feedback"],
   },
   {
-    name: "🛠️ SUPPORT",
+    name: supportCategoryName,
     writable: true,
     channels: ["🎫・support", "🐞・bug-reports"],
   },

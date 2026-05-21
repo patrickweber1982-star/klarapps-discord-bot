@@ -20,6 +20,7 @@ export const helpCommand: BotCommand = {
         "`/setup` - erstellt die KlarApps Discord-Grundstruktur.",
         "`/help` - zeigt diese Hilfe und das KlarBot Menue.",
         "`/verify` - erstellt ein Verify-Panel fuer neue Mitglieder.",
+        "`/tickets` - erstellt ein Support-Ticket-Panel.",
       ].join("\n"),
       "KlarBot Hilfe",
     );

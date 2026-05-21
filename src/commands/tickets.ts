@@ -1,0 +1,48 @@
+import { ActionRowBuilder, PermissionFlagsBits, SlashCommandBuilder, type ButtonBuilder } from "discord.js";
+
+import { ticketButtonIds, ticketTypes } from "../config/tickets.js";
+import type { BotCommand } from "../types/command.js";
+import { primaryButton, secondaryButton } from "../utils/components.js";
+import { infoEmbed } from "../utils/embeds.js";
+import { hasAdministrator, hasManageGuild } from "../utils/permissions.js";
+
+export const ticketsCommand: BotCommand = {
+  name: "tickets",
+  data: new SlashCommandBuilder()
+    .setName("tickets")
+    .setDescription("Erstellt ein Ticket-Panel.")
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+  async execute({ interaction }) {
+    if (!interaction.guild) {
+      await interaction.reply({
+        content: "Dieser Command kann nur auf einem Discord-Server genutzt werden.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (!hasAdministrator(interaction) && !hasManageGuild(interaction)) {
+      await interaction.reply({
+        content: "Nur Administratoren oder Nutzer mit Server-verwalten-Recht duerfen /tickets nutzen.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      primaryButton(ticketButtonIds.support, ticketTypes.support.buttonLabel),
+      secondaryButton(ticketButtonIds.bug, ticketTypes.bug.buttonLabel),
+      secondaryButton(ticketButtonIds.feature, ticketTypes.feature.buttonLabel),
+    );
+
+    await interaction.reply({
+      embeds: [
+        infoEmbed(
+          "Wähle eine Kategorie und öffne ein Support-Ticket.",
+          "🎫 KlarBot Support",
+        ),
+      ],
+      components: [row],
+    });
+  },
+};

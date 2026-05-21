@@ -23,7 +23,7 @@ const helpButtonContent = {
   [helpButtonIds.support]: {
     title: "Support",
     description:
-      "Ein Ticket-System ist fuer eine spaetere Phase geplant. Aktuell bereitet KlarBot nur die Support-Struktur vor.",
+      "`/tickets` erstellt ein Support-Panel. Nutzer koennen Support-, Bug- und Feature-Tickets oeffnen.",
   },
   [helpButtonIds.roles]: {
     title: "Rollen",

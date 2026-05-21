@@ -49,3 +49,5 @@ export const setupRoleDefinitions = [
   managedRoles.pro,
   managedRoles.community,
 ] as const;
+
+export const ticketStaffRoleNames = ["👑 Founder", "🛠️ Developer", "🤝 Moderator"] as const;
