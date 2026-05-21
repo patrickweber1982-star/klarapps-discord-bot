@@ -10,13 +10,14 @@ import {
   type OverwriteResolvable,
   type Role,
   type TextChannel,
+  type VoiceChannel,
 } from "discord.js";
 
 import {
   klarBotGuideChannelName,
+  rolesOverviewChannelName,
   rulesChannelName,
   setupCategoryDefinitions,
-  supportHintChannelName,
   welcomeChannelName,
   type SetupAccess,
 } from "../config/channels.js";
@@ -28,7 +29,7 @@ import {
 } from "../config/roles.js";
 import type { BotCommand } from "../types/command.js";
 import { primaryButton } from "../utils/components.js";
-import { infoEmbed, onboardingEmbed, successEmbed } from "../utils/embeds.js";
+import { onboardingEmbed, rolesEmbed, successEmbed } from "../utils/embeds.js";
 import { logger as coreLogger } from "../utils/logger.js";
 import { hasAdministrator } from "../utils/permissions.js";
 
@@ -196,6 +197,19 @@ async function ensureCategoriesAndChannels(
     );
 
     for (const [channelIndex, channelDefinition] of categoryDefinition.channels.entries()) {
+      if ("type" in channelDefinition && channelDefinition.type === "voice") {
+        await ensureVoiceChannel(
+          guild,
+          category,
+          roles,
+          channelDefinition.name,
+          channelDefinition.access,
+          channelIndex,
+          result,
+        );
+        continue;
+      }
+
       const channel = await ensureTextChannel(
         guild,
         category,
@@ -297,6 +311,52 @@ async function ensureTextChannel(
   return channel;
 }
 
+async function ensureVoiceChannel(
+  guild: Guild,
+  category: CategoryChannel,
+  roles: SetupRoles,
+  channelName: string,
+  access: SetupAccess,
+  position: number,
+  result: SetupResult,
+) {
+  const existingChannel = guild.channels.cache.find((channel): channel is VoiceChannel => {
+    return channel.type === ChannelType.GuildVoice && channel.name === channelName;
+  });
+
+  const overwrites = buildOverwrites(guild, roles, access, false);
+
+  if (existingChannel) {
+    result.reusedChannels.push(channelName);
+
+    if (existingChannel.parentId !== category.id) {
+      await existingChannel.setParent(category.id, {
+        reason: "KlarBot Setup: KlarApps Voicechannel einsortieren",
+      });
+    }
+
+    await existingChannel.permissionOverwrites.set(overwrites);
+    await existingChannel.setPosition(position, {
+      reason: "KlarBot Setup: Voicechannels sortieren",
+    });
+    return existingChannel;
+  }
+
+  const channel = await guild.channels.create({
+    name: channelName,
+    type: ChannelType.GuildVoice,
+    parent: category.id,
+    permissionOverwrites: overwrites,
+    reason: "KlarBot Setup: KlarApps Voicechannel",
+  });
+
+  result.createdChannels.push(channel.name);
+  await channel.setPosition(position, {
+    reason: "KlarBot Setup: Voicechannels sortieren",
+  });
+  return channel;
+}
+
 function buildOverwrites(
   guild: Guild,
   roles: SetupRoles,
@@ -336,6 +396,27 @@ function buildOverwrites(
     ],
   });
 
+  const voiceAccess = (role: Role): OverwriteResolvable => ({
+    id: role.id,
+    allow: [
+      PermissionsBitField.Flags.ViewChannel,
+      PermissionsBitField.Flags.Connect,
+      PermissionsBitField.Flags.Speak,
+      PermissionsBitField.Flags.UseVAD,
+    ],
+  });
+
+  const teamVoiceAllow: OverwriteResolvable[] = roles.teamRoles.map((role) => ({
+    id: role.id,
+    allow: [
+      PermissionsBitField.Flags.ViewChannel,
+      PermissionsBitField.Flags.Connect,
+      PermissionsBitField.Flags.Speak,
+      PermissionsBitField.Flags.UseVAD,
+      PermissionsBitField.Flags.MoveMembers,
+    ],
+  }));
+
   if (access === "rules") {
     return [
       {
@@ -371,6 +452,10 @@ function buildOverwrites(
     return [hiddenForEveryone, ...teamAllow];
   }
 
+  if (access === "voice") {
+    return [hiddenForEveryone, voiceAccess(roles.community), ...teamVoiceAllow];
+  }
+
   return [
     hiddenForEveryone,
     writable(roles.community),
@@ -383,7 +468,7 @@ async function ensureSetupMessages(channels: Map<string, TextChannel>, result: S
   await ensureRulesMessage(channels.get(rulesChannelName), result);
   await ensureKlarBotGuideMessage(channels.get(klarBotGuideChannelName), result);
   await ensureWelcomeMessage(channels.get(welcomeChannelName), result);
-  await ensureSupportHintMessage(channels.get(supportHintChannelName), result);
+  await ensureRolesOverviewMessage(channels.get(rolesOverviewChannelName), result);
 }
 
 async function ensureRulesMessage(channel: TextChannel | undefined, result: SetupResult) {
@@ -478,24 +563,38 @@ async function ensureWelcomeMessage(channel: TextChannel | undefined, result: Se
   );
 }
 
-async function ensureSupportHintMessage(channel: TextChannel | undefined, result: SetupResult) {
+async function ensureRolesOverviewMessage(channel: TextChannel | undefined, result: SetupResult) {
   if (!channel) {
     return;
   }
 
   await ensureUniqueBotMessage(
     channel,
-    "klarbot-support-hint",
+    "klarbot-roles-overview",
     {
       embeds: [
-        infoEmbed(
-          "Nutze `/tickets`, um ein Support-, Bug- oder Feature-Ticket zu erstellen.",
-          "🎫 Support",
+        rolesEmbed(
+          [
+            "Hier siehst du die wichtigsten Rollen auf diesem Server.",
+            "",
+            "**Team**",
+            "👑 Founder - Serverleitung und finale Entscheidungen.",
+            "🛠️ Developer - Entwicklung, Technik und KlarBot-Systeme.",
+            "🤝 Moderator - Community-Schutz, Support und Ordnung.",
+            "",
+            "**Community und Kunden**",
+            "💎 Pro Kunde - Zugriff auf Pro-Bereiche und Kundeninformationen.",
+            "🧪 Beta Tester - frühe Tests, Feedback und Beta-Bereiche.",
+            "👤 Community - normaler Zugriff auf Community, Support und KlarApps-Bereiche.",
+            "",
+            "Rollenbuttons werden später separat über `/roles` genutzt.",
+          ].join("\n"),
+          "🎭 Rollen",
         ),
       ],
     },
     result,
-    "Support-Hinweis",
+    "Rollenübersicht",
   );
 }
 

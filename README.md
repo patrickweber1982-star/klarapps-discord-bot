@@ -144,11 +144,12 @@ Die Struktur ist bewusst einfach gehalten, damit spaeter Lizenzsysteme, Feature 
 
 Erstellt werden:
 
-- `📢 INFO` mit Regeln, KlarBot-Erklaerung, Willkommen, Ankuendigungen und Roadmap.
+- `📢 INFO` mit Regeln, KlarBot-Erklaerung, Willkommen, Ankuendigungen, Roadmap und Rollenuebersicht.
 - `💬 COMMUNITY` mit Allgemein, Ideen/Feedback, Showcase und Community-Hilfe.
 - `🛠️ SUPPORT` mit Support, Bug Reports und Feature-Wuenschen.
 - `🤖 KLARAPPS` mit Produktbereichen.
 - `🔒 KUNDENBEREICH` mit Downloads, Pro Features und Beta Tests.
+- `🔊 VOICE` mit Allgemein, Support Talk und Community Talk.
 - `👮 MODERATION` mit Mod-Logs fuer Teamrollen.
 - Rollen fuer Founder, Developer, Moderator, Pro Kunde, Beta Tester, Regeln akzeptiert und Community.
 
@@ -168,6 +169,7 @@ Permissions:
 - `🤖・so-funktioniert-klarbot` ist nur fuer `📘 Regeln akzeptiert` und Teamrollen sichtbar.
 - Community-Bereiche sind fuer `👤 Community` und Teamrollen sichtbar.
 - Kundenbereiche sind fuer `💎 Pro Kunde`, `🧪 Beta Tester` und Teamrollen sichtbar.
+- Voice-Bereiche sind fuer `👤 Community` und Teamrollen sichtbar und betretbar.
 - Moderationsbereiche sind nur fuer Teamrollen sichtbar.
 - Info-Channels sind fuer Community lesbar, aber nur Teamrollen duerfen schreiben.
 - Teamrollen sind `👑 Founder`, `🛠️ Developer` und `🤝 Moderator`.
@@ -177,9 +179,11 @@ Automatische Setup-Nachrichten:
 - Regel-Embed mit Button in `📜・regeln`.
 - KlarBot-Erklaerung mit Button in `🤖・so-funktioniert-klarbot`.
 - Willkommens-Embed in `👋・willkommen`.
-- Support-Hinweis in `🎫・support`.
+- Rollenuebersicht in `🎭・rollen`.
 
 Der Bot braucht fuer `/setup` insbesondere Rechte zum Verwalten von Rollen, Channels und Nachrichten sowie zum Lesen der Nachrichtenhistorie fuer den Duplicate-Schutz.
+
+Die Rollenuebersicht in `🎭・rollen` zeigt die wichtigsten Serverrollen und erklaert kurz Founder, Developer, Moderator, Pro Kunde, Beta Tester und Community. Rollenbuttons werden dort noch nicht automatisch gepostet; dafuer steht separat `/roles` bereit.
 
 ## Help Command
 
@@ -265,12 +269,12 @@ Ticket-Kompatibilitaet: Founder, Developer und Moderator sehen private Tickets w
 
 Das Panel enthaelt vier Buttons:
 
-- `🔴 Stream ankündigen` erstellt ein `LIVE NOW` Embed mit Stream-Hinweis und Platzhalter-Link.
-- `📹 Neues Video` erstellt ein Video-Embed mit Platzhalter-Link.
+- `🔴 Stream ankündigen` erstellt ein `LIVE NOW` Embed mit Stream-Hinweis und Platzhalter-Link. Twitch/YouTube-Verbindung folgt später.
+- `📹 Neues Video` erstellt ein Video-Embed mit Platzhalter-Link. Twitch/YouTube-Verbindung folgt später.
 - `🎁 Giveaway` erstellt ein einfaches Giveaway-Embed als Vorbereitung, ohne Auswertung oder Datenbank.
 - `📢 Community Update` erstellt ein kurzes Update-Embed fuer Ankuendigungen.
 
-Creator-Aktionen werden im Terminal mit `[KlarBot] [CREATOR]` geloggt. Es gibt noch keine Twitch-/YouTube-Anbindung, keine Datenbank und keine automatische Link-Verwaltung. Stream- und Video-Links sind aktuell Platzhalter, bis spaeter Modals oder konfigurierte Creator-Profile ergaenzt werden.
+Creator-Aktionen werden im Terminal mit `[KlarBot] [CREATOR]` geloggt. Es gibt noch keine Twitch-/YouTube-Anbindung, keine Datenbank und keine automatische Link-Verwaltung. Stream- und Video-Links sind aktuell klar als Platzhalter markiert, bis spaeter Modals oder konfigurierte Creator-Profile ergaenzt werden.
 
 ## Rollenbuttons BASIC
 

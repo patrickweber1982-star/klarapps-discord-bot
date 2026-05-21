@@ -2,6 +2,7 @@ export const rulesChannelName = "📜・regeln";
 export const klarBotGuideChannelName = "🤖・so-funktioniert-klarbot";
 export const welcomeChannelName = "👋・willkommen";
 export const supportHintChannelName = "🎫・support";
+export const rolesOverviewChannelName = "🎭・rollen";
 
 export const verifyPanelChannelNames = [welcomeChannelName, rulesChannelName] as const;
 
@@ -9,6 +10,7 @@ export const infoCategoryName = "📢 INFO";
 export const supportCategoryName = "🛠️ SUPPORT";
 export const moderationCategoryName = "👮 MODERATION";
 export const moderationLogChannelName = "📋・mod-logs";
+export const voiceCategoryName = "🔊 VOICE";
 
 export const setupCategoryDefinitions = [
   {
@@ -20,6 +22,7 @@ export const setupCategoryDefinitions = [
       { name: welcomeChannelName, access: "info" },
       { name: "📢・ankündigungen", access: "info" },
       { name: "🗺️・roadmap", access: "info" },
+      { name: rolesOverviewChannelName, access: "info" },
     ],
   },
   {
@@ -64,6 +67,15 @@ export const setupCategoryDefinitions = [
     access: "team",
     channels: [
       { name: moderationLogChannelName, access: "team" },
+    ],
+  },
+  {
+    name: voiceCategoryName,
+    access: "voice",
+    channels: [
+      { name: "🔊・Allgemein", access: "voice", type: "voice" },
+      { name: "🎙️・Support Talk", access: "voice", type: "voice" },
+      { name: "🎮・Community Talk", access: "voice", type: "voice" },
     ],
   },
 ] as const;
