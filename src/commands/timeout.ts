@@ -2,9 +2,9 @@ import { SlashCommandBuilder } from "discord.js";
 
 import type { BotCommand } from "../types/command.js";
 import { canActOnMember } from "../utils/moderation.js";
-import { errorEmbed, moderationEmbed, successEmbed } from "../utils/embeds.js";
+import { errorEmbed, punishmentEmbed, warningEmbed } from "../utils/embeds.js";
 import { logModerationAction } from "../utils/moderationLogs.js";
-import { botPermissionMessage, canUseModeration, moderationPermissionMessage } from "../utils/permissions.js";
+import { botPermissionMessage, canModerate, moderationPermissionMessage } from "../utils/permissions.js";
 
 export const timeoutCommand: BotCommand = {
   name: "timeout",
@@ -31,7 +31,7 @@ export const timeoutCommand: BotCommand = {
       return;
     }
 
-    if (!(await canUseModeration(interaction))) {
+    if (!(await canModerate(interaction))) {
       await interaction.reply({ embeds: [errorEmbed(moderationPermissionMessage())], ephemeral: true });
       return;
     }
@@ -60,12 +60,30 @@ export const timeoutCommand: BotCommand = {
       return;
     }
 
+    if (target.communicationDisabledUntilTimestamp && target.communicationDisabledUntilTimestamp > Date.now()) {
+      await interaction.reply({
+        embeds: [
+          warningEmbed(
+            `${targetUser} ist bereits bis <t:${Math.floor(target.communicationDisabledUntilTimestamp / 1000)}:R> im Timeout.`,
+            "Timeout bereits aktiv",
+          ),
+        ],
+        ephemeral: true,
+      });
+      return;
+    }
+
     await target.timeout(minutes * 60 * 1000, reason);
 
     await interaction.reply({
       embeds: [
-        successEmbed(
-          `${targetUser} wurde fuer ${minutes} Minuten in Timeout gesetzt.\n**Grund:** ${reason}`,
+        punishmentEmbed(
+          [
+            `**Nutzer:** ${targetUser}`,
+            `**Moderator:** ${interaction.user}`,
+            `**Dauer:** ${minutes} Minuten`,
+            `**Grund:** ${reason}`,
+          ].join("\n"),
           "Timeout gesetzt",
         ),
       ],

@@ -367,6 +367,10 @@ function buildOverwrites(
     ];
   }
 
+  if (access === "team") {
+    return [hiddenForEveryone, ...teamAllow];
+  }
+
   return [
     hiddenForEveryone,
     writable(roles.community),

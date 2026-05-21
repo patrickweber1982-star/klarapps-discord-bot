@@ -9,6 +9,7 @@ const klarAppsBrand = {
     info: 0x2563eb,
     warning: 0xf59e0b,
     moderation: 0x7c3aed,
+    punishment: 0xef4444,
     onboarding: 0x14b8a6,
   },
 };
@@ -42,6 +43,10 @@ export function warningEmbed(description: string, title = "Hinweis") {
 
 export function moderationEmbed(description: string, title = "Moderation") {
   return baseEmbed(title, description, "moderation");
+}
+
+export function punishmentEmbed(description: string, title = "Moderationsaktion") {
+  return baseEmbed(title, description, "punishment");
 }
 
 export function onboardingEmbed(description: string, title = "KlarApps Onboarding") {

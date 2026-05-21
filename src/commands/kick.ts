@@ -2,9 +2,9 @@ import { SlashCommandBuilder } from "discord.js";
 
 import type { BotCommand } from "../types/command.js";
 import { canActOnMember } from "../utils/moderation.js";
-import { errorEmbed, successEmbed } from "../utils/embeds.js";
+import { errorEmbed, punishmentEmbed } from "../utils/embeds.js";
 import { logModerationAction } from "../utils/moderationLogs.js";
-import { botPermissionMessage, canUseModeration, moderationPermissionMessage } from "../utils/permissions.js";
+import { botPermissionMessage, canModerate, moderationPermissionMessage } from "../utils/permissions.js";
 
 export const kickCommand: BotCommand = {
   name: "kick",
@@ -23,7 +23,7 @@ export const kickCommand: BotCommand = {
       return;
     }
 
-    if (!(await canUseModeration(interaction))) {
+    if (!(await canModerate(interaction))) {
       await interaction.reply({ embeds: [errorEmbed(moderationPermissionMessage())], ephemeral: true });
       return;
     }
@@ -53,7 +53,16 @@ export const kickCommand: BotCommand = {
     await target.kick(reason);
 
     await interaction.reply({
-      embeds: [successEmbed(`${targetUser.tag} wurde gekickt.\n**Grund:** ${reason}`, "Nutzer gekickt")],
+      embeds: [
+        punishmentEmbed(
+          [
+            `**Nutzer:** ${targetUser.tag}`,
+            `**Moderator:** ${interaction.user}`,
+            `**Grund:** ${reason}`,
+          ].join("\n"),
+          "Nutzer gekickt",
+        ),
+      ],
       ephemeral: true,
     });
 

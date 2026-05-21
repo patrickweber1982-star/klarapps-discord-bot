@@ -1,8 +1,9 @@
-type LogLevel = "info" | "success" | "warn" | "error" | "debug";
+type LogLevel = "info" | "success" | "moderation" | "warn" | "error" | "debug";
 
 const levelColors: Record<LogLevel, string> = {
   info: "\x1b[36m",
   success: "\x1b[32m",
+  moderation: "\x1b[35m",
   warn: "\x1b[33m",
   error: "\x1b[31m",
   debug: "\x1b[90m",
@@ -41,6 +42,10 @@ export const logger = {
 
   success(message: string, meta?: unknown) {
     writeLog("success", console.info, message, meta);
+  },
+
+  moderation(message: string, meta?: unknown) {
+    writeLog("moderation", console.info, message, meta);
   },
 
   warn(message: string, meta?: unknown) {

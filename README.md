@@ -86,12 +86,12 @@ src/
 
 - Modularer Command Handler mit zentraler Command-Map.
 - Event Handler fuer `ready` und `interactionCreate`, vorbereitet fuer weitere Events wie `guildMemberAdd`.
-- Logger mit `info`, `success`, `warn`, `error` und `debug`.
+- Logger mit `info`, `success`, `moderation`, `warn`, `error` und `debug`.
 - Config-System mit Validierung fuer `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID` und `DISCORD_GUILD_ID`.
 - Globales Error Handling fuer `unhandledRejection` und `uncaughtException`.
 - Interaction-Fehler werden sauber als KlarBot-Embed beantwortet, damit keine Discord-Fehlermeldung stehen bleibt.
 - Permission-Helfer fuer Admin, Server-Owner, Teamrollen, Moderation und `ManageGuild`.
-- KlarApps/KlarBot Embed-Helfer fuer `info`, `success`, `warning`, `error`, `moderation` und `onboarding`.
+- KlarApps/KlarBot Embed-Helfer fuer `info`, `success`, `warning`, `error`, `moderation`, `punishment` und `onboarding`.
 - Bot Presence wird im `ready` Event gesetzt und rotiert zwischen KlarApps-Systemstatus, Hilfe und Community-Hinweisen.
 - UI-Component-Helfer fuer Buttons, Dropdowns und Modals.
 - Interaction Router fuer Slash Commands, Buttons, Dropdowns und Modals inklusive freundlicher Antworten auf unbekannte Interactions.
@@ -102,6 +102,7 @@ Terminal-Logs folgen einem einheitlichen Format:
 
 ```txt
 [KlarBot] [SUCCESS] Ticket erstellt
+[KlarBot] [MODERATION] Nachrichten gelöscht
 [KlarBot] [ERROR] Permission fehlgeschlagen
 ```
 
@@ -142,6 +143,7 @@ Erstellt werden:
 - `🛠️ SUPPORT` mit Support, Bug Reports und Feature-Wuenschen.
 - `🤖 KLARAPPS` mit Produktbereichen.
 - `🔒 KUNDENBEREICH` mit Downloads, Pro Features und Beta Tests.
+- `👮 MODERATION` mit Mod-Logs fuer Teamrollen.
 - Rollen fuer Founder, Developer, Moderator, Pro Kunde, Beta Tester, Regeln akzeptiert und Community.
 
 Nur Administratoren koennen `/setup` ausfuehren.
@@ -160,6 +162,7 @@ Permissions:
 - `🤖・so-funktioniert-klarbot` ist nur fuer `📘 Regeln akzeptiert` und Teamrollen sichtbar.
 - Community-Bereiche sind fuer `👤 Community` und Teamrollen sichtbar.
 - Kundenbereiche sind fuer `💎 Pro Kunde`, `🧪 Beta Tester` und Teamrollen sichtbar.
+- Moderationsbereiche sind nur fuer Teamrollen sichtbar.
 - Info-Channels sind fuer Community lesbar, aber nur Teamrollen duerfen schreiben.
 - Teamrollen sind `👑 Founder`, `🛠️ Developer` und `🤝 Moderator`.
 
@@ -231,7 +234,7 @@ Das Ticket-System V1 nutzt keine Datenbank, kein Webpanel, keine AI und keine An
 
 KlarBot enthaelt erste stabile Moderationscommands:
 
-- `/clear amount:1-100` loescht Nachrichten im aktuellen Channel.
+- `/clear amount:1-100` loescht Nachrichten im aktuellen Channel und bestaetigt ephemeral, wie viele Nachrichten entfernt wurden.
 - `/timeout user minutes reason?` setzt einen Nutzer in Timeout.
 - `/kick user reason?` kickt einen Nutzer vom Server.
 
@@ -242,9 +245,13 @@ Moderationscommands duerfen genutzt werden von:
 - `🤝 Moderator`
 - Administratoren
 
-KlarBot prueft bei `/timeout` und `/kick`, ob der Server-Owner betroffen ist, ob die Rollen-Hierarchie passt und ob der Bot die Aktion ausfuehren darf. Fehler werden freundlich als Embed beantwortet.
+KlarBot prueft bei `/clear`, ob die Zahl gueltig ist, ob der Channel Nachrichten loeschen kann und ob der Bot die Berechtigung `Nachrichten verwalten` besitzt. Nachrichten, die Discord wegen des 14-Tage-Limits nicht loeschen kann, werden sauber behandelt.
 
-Mod-Logs sind vorbereitet: Wenn ein Channel `📋・mod-logs` vorhanden ist, schreibt KlarBot Moderationsaktionen dort als Embed. Wenn der Channel fehlt, wird nur im Terminal geloggt.
+KlarBot prueft bei `/timeout` und `/kick`, ob der Server-Owner betroffen ist, ob die Rollen-Hierarchie passt, ob der Bot die Aktion ausfuehren darf und ob bereits ein Timeout aktiv ist. Antworten nutzen mobilefreundliche Moderations-Embeds mit Nutzer, Moderator, Dauer und Grund.
+
+Mod-Logs: `/setup` legt optional `👮 MODERATION` und `📋・mod-logs` ohne Duplikate an. Wenn der Channel vorhanden ist, schreibt KlarBot Moderationsaktionen dort als Embed. Wenn der Channel fehlt, wird nur im Terminal mit `[KlarBot] [MODERATION]` geloggt.
+
+Ticket-Kompatibilitaet: Founder, Developer und Moderator sehen private Tickets weiterhin und koennen sie moderieren.
 
 ## Geplante Features
 

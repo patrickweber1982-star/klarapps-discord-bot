@@ -24,7 +24,7 @@ export async function logModerationAction(options: ModerationLogOptions) {
     .filter(Boolean)
     .join(" | ");
 
-  logger.info(`Moderation: ${message}`);
+  logger.moderation(message);
 
   await options.guild.channels.fetch();
 
@@ -47,8 +47,10 @@ export async function logModerationAction(options: ModerationLogOptions) {
           options.details ? `**Details:** ${options.details}` : null,
         ]
           .filter(Boolean)
-          .join("\n"),
+        .join("\n"),
       ),
     ],
+  }).catch((error) => {
+    logger.warn("Moderationslog konnte nicht in Discord geschrieben werden", error);
   });
 }

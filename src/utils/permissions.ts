@@ -44,13 +44,21 @@ export function hasTeamRole(member: GuildMember) {
   );
 }
 
+export function isTeamMember(member: GuildMember) {
+  return hasTeamRole(member);
+}
+
 export function hasModerationRole(member: GuildMember) {
   return moderationRoleNames.some((roleName) =>
     member.roles.cache.some((role) => role.name === roleName),
   );
 }
 
-export async function canUseModeration(interaction: ChatInputCommandInteraction) {
+export function isModerator(member: GuildMember) {
+  return hasModerationRole(member);
+}
+
+export async function canModerate(interaction: ChatInputCommandInteraction) {
   if (!interaction.guild) {
     return false;
   }
@@ -60,7 +68,11 @@ export async function canUseModeration(interaction: ChatInputCommandInteraction)
   }
 
   const member = await interaction.guild.members.fetch(interaction.user.id);
-  return hasTeamRole(member) || hasModerationRole(member);
+  return isTeamMember(member) || isModerator(member);
+}
+
+export async function canUseModeration(interaction: ChatInputCommandInteraction) {
+  return canModerate(interaction);
 }
 
 export function moderationPermissionMessage() {

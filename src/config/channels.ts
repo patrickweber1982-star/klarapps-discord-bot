@@ -59,6 +59,13 @@ export const setupCategoryDefinitions = [
       { name: "🧪・beta-tests", access: "customer" },
     ],
   },
+  {
+    name: moderationCategoryName,
+    access: "team",
+    channels: [
+      { name: moderationLogChannelName, access: "team" },
+    ],
+  },
 ] as const;
 
 export type SetupAccess =
