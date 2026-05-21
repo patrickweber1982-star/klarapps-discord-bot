@@ -9,6 +9,7 @@ import { setupCommand } from "./setup.js";
 import { ticketsCommand } from "./tickets.js";
 import { timeoutCommand } from "./timeout.js";
 import { verifyCommand } from "./verify.js";
+import { rolesPanelCommand } from "../features/roles/rolesPanel.js";
 import type { BotCommand } from "../types/command.js";
 
 export const commandList = [
@@ -19,6 +20,7 @@ export const commandList = [
   ticketsCommand,
   creatorPanelCommand,
   rolesCommand,
+  rolesPanelCommand,
   giveawayCommand,
   clearCommand,
   timeoutCommand,

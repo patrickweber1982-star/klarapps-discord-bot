@@ -9,6 +9,7 @@ import { handleOnboardingButton } from "./onboardingButtons.js";
 import { handleRoleButton } from "./roleButtons.js";
 import { handleTicketButton } from "./ticketButtons.js";
 import { handleVerifyButton } from "./verifyButton.js";
+import { handleSelfRoleInteraction } from "../features/roles/rolesInteraction.js";
 import {
   replyWithInteractionError,
   replyWithUnknownInteraction,
@@ -45,6 +46,10 @@ export async function routeInteraction(interaction: Interaction, options: Intera
       }
 
       if (await handleCreatorButton(interaction)) {
+        return;
+      }
+
+      if (await handleSelfRoleInteraction(interaction)) {
         return;
       }
 

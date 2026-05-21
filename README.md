@@ -52,6 +52,7 @@ Aktuell werden diese Commands registriert:
 /tickets -> Erstellt ein Ticket-Panel fuer Support, Bugs und Feature-Wuensche.
 /creator-panel -> Erstellt ein Creator-Panel fuer Streams, Videos, Giveaways und Updates.
 /roles -> Erstellt ein Rollen-Panel fuer Community-, Interessen- und Update-Rollen.
+/roles-panel -> Erstellt das Self-Role-Panel V1.
 /giveaway -> Erstellt ein einfaches Giveaway.
 /clear -> Loescht Nachrichten.
 /timeout -> Setzt einen Nutzer in Timeout.
@@ -316,6 +317,36 @@ Das Panel enthaelt diese Rollenbuttons:
 Beim Klick vergibt KlarBot die Rolle. Beim erneuten Klick entfernt KlarBot sie wieder. Fehlende Rollen werden automatisch erstellt und anhand des Rollennamens wiederverwendet, damit keine Duplikate entstehen.
 
 Antworten sind ephemeral, damit der Channel sauber bleibt. Rollenaktionen werden im Terminal mit `[KlarBot] [ROLES]` geloggt. Das System nutzt keine Datenbank, keine API und keine Website-Anbindung. Die Utility-Funktionen sind so aufgebaut, dass `/setup` spaeter automatisch ein Rollen-Panel posten kann.
+
+## Self-Role-System V1
+
+`/roles-panel` erstellt ein config-basiertes Self-Role-Panel. Der Command darf nur von Administratoren sowie den Rollen `👑 Founder` und `🛠️ Developer` genutzt werden.
+
+Die Rollen sind fest in `src/features/roles/rolesConfig.ts` definiert. Nur diese Whitelist darf ueber Buttons vergeben oder entfernt werden:
+
+- `role_youtube` -> `🎥 YouTube`
+- `role_twitch` -> `🟣 Twitch`
+- `role_tiktok` -> `🎵 TikTok`
+- `role_gaming` -> `🎮 Gaming`
+- `role_dev` -> `💻 Development`
+- `role_design` -> `🎨 Design`
+- `role_updates` -> `🔔 Updates`
+- `role_giveaways` -> `🎉 Giveaways`
+- `role_events` -> `📢 Events`
+
+Beim Klick toggelt KlarBot die Rolle: Wenn der Nutzer sie noch nicht hat, wird sie hinzugefuegt. Wenn er sie bereits hat, wird sie entfernt. Antworten sind ephemeral:
+
+- `✅ Rolle hinzugefügt`
+- `🗑️ Rolle entfernt`
+
+Fehler wie fehlende Rollen, fehlende Bot-Rechte oder nicht gefundene Guild-Member werden als KlarBot Error-Embed beantwortet. Rollen werden in V1 nicht automatisch erstellt; sie muessen im Server vorhanden sein und die Bot-Rolle muss hoch genug stehen.
+
+Dateien:
+
+- `src/features/roles/rolesPanel.ts`
+- `src/features/roles/rolesConfig.ts`
+- `src/features/roles/rolesInteraction.ts`
+- `src/features/roles/types.ts`
 
 ## Geplante Features
 
