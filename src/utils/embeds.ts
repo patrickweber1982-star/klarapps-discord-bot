@@ -15,6 +15,8 @@ const klarAppsBrand = {
     livestream: 0xef4444,
     video: 0x0ea5e9,
     giveaway: 0xf59e0b,
+    roles: 0x8b5cf6,
+    community: 0x22c55e,
   },
 };
 
@@ -71,4 +73,12 @@ export function videoEmbed(description: string, title = "Video") {
 
 export function giveawayEmbed(description: string, title = "Giveaway") {
   return baseEmbed(title, description, "giveaway");
+}
+
+export function rolesEmbed(description: string, title = "Community Rollen") {
+  return baseEmbed(title, description, "roles");
+}
+
+export function communityEmbed(description: string, title = "Community") {
+  return baseEmbed(title, description, "community");
 }

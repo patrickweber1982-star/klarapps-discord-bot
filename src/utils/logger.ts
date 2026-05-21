@@ -1,10 +1,19 @@
-type LogLevel = "info" | "success" | "moderation" | "creator" | "warn" | "error" | "debug";
+type LogLevel =
+  | "info"
+  | "success"
+  | "moderation"
+  | "creator"
+  | "roles"
+  | "warn"
+  | "error"
+  | "debug";
 
 const levelColors: Record<LogLevel, string> = {
   info: "\x1b[36m",
   success: "\x1b[32m",
   moderation: "\x1b[35m",
   creator: "\x1b[95m",
+  roles: "\x1b[34m",
   warn: "\x1b[33m",
   error: "\x1b[31m",
   debug: "\x1b[90m",
@@ -51,6 +60,10 @@ export const logger = {
 
   creator(message: string, meta?: unknown) {
     writeLog("creator", console.info, message, meta);
+  },
+
+  roles(message: string, meta?: unknown) {
+    writeLog("roles", console.info, message, meta);
   },
 
   warn(message: string, meta?: unknown) {

@@ -51,6 +51,7 @@ Aktuell werden diese Commands registriert:
 /verify -> Erstellt ein Verify-Panel fuer neue Mitglieder.
 /tickets -> Erstellt ein Ticket-Panel fuer Support, Bugs und Feature-Wuensche.
 /creator-panel -> Erstellt ein Creator-Panel fuer Streams, Videos, Giveaways und Updates.
+/roles -> Erstellt ein Rollen-Panel fuer Community-, Interessen- und Update-Rollen.
 /clear -> Loescht Nachrichten.
 /timeout -> Setzt einen Nutzer in Timeout.
 /kick -> Kickt einen Nutzer.
@@ -87,13 +88,14 @@ src/
 
 - Modularer Command Handler mit zentraler Command-Map.
 - Event Handler fuer `ready` und `interactionCreate`, vorbereitet fuer weitere Events wie `guildMemberAdd`.
-- Logger mit `info`, `success`, `moderation`, `creator`, `warn`, `error` und `debug`.
+- Logger mit `info`, `success`, `moderation`, `creator`, `roles`, `warn`, `error` und `debug`.
 - Config-System mit Validierung fuer `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID` und `DISCORD_GUILD_ID`.
 - Globales Error Handling fuer `unhandledRejection` und `uncaughtException`.
 - Interaction-Fehler werden sauber als KlarBot-Embed beantwortet, damit keine Discord-Fehlermeldung stehen bleibt.
 - Permission-Helfer fuer Admin, Server-Owner, Teamrollen, Moderation und `ManageGuild`.
 - KlarApps/KlarBot Embed-Helfer fuer `info`, `success`, `warning`, `error`, `moderation`, `punishment` und `onboarding`.
 - Creator-Embed-Helfer fuer `creator`, `livestream`, `video` und `giveaway`.
+- Rollen-Embed-Helfer fuer `roles` und `community`.
 - Bot Presence wird im `ready` Event gesetzt und rotiert zwischen KlarApps-Systemstatus, Hilfe und Community-Hinweisen.
 - UI-Component-Helfer fuer Buttons, Dropdowns und Modals.
 - Interaction Router fuer Slash Commands, Buttons, Dropdowns und Modals inklusive freundlicher Antworten auf unbekannte Interactions.
@@ -106,6 +108,7 @@ Terminal-Logs folgen einem einheitlichen Format:
 [KlarBot] [SUCCESS] Ticket erstellt
 [KlarBot] [MODERATION] Nachrichten gelöscht
 [KlarBot] [CREATOR] Stream-Ankündigung erstellt
+[KlarBot] [ROLES] Rolle vergeben
 [KlarBot] [ERROR] Permission fehlgeschlagen
 ```
 
@@ -268,6 +271,22 @@ Das Panel enthaelt vier Buttons:
 - `📢 Community Update` erstellt ein kurzes Update-Embed fuer Ankuendigungen.
 
 Creator-Aktionen werden im Terminal mit `[KlarBot] [CREATOR]` geloggt. Es gibt noch keine Twitch-/YouTube-Anbindung, keine Datenbank und keine automatische Link-Verwaltung. Stream- und Video-Links sind aktuell Platzhalter, bis spaeter Modals oder konfigurierte Creator-Profile ergaenzt werden.
+
+## Rollenbuttons BASIC
+
+`/roles` erstellt ein mobiles Rollen-Panel fuer Community-, Interessen-, Creator- und Update-Rollen. Der Command darf von Administratoren und KlarApps-Teamrollen genutzt werden.
+
+Das Panel enthaelt diese Rollenbuttons:
+
+- `🎬 Creator`
+- `💻 Coding`
+- `🎮 Gaming`
+- `🧪 Beta Tester`
+- `📢 Updates`
+
+Beim Klick vergibt KlarBot die Rolle. Beim erneuten Klick entfernt KlarBot sie wieder. Fehlende Rollen werden automatisch erstellt und anhand des Rollennamens wiederverwendet, damit keine Duplikate entstehen.
+
+Antworten sind ephemeral, damit der Channel sauber bleibt. Rollenaktionen werden im Terminal mit `[KlarBot] [ROLES]` geloggt. Das System nutzt keine Datenbank, keine API und keine Website-Anbindung. Die Utility-Funktionen sind so aufgebaut, dass `/setup` spaeter automatisch ein Rollen-Panel posten kann.
 
 ## Geplante Features
 

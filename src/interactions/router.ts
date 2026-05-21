@@ -5,6 +5,7 @@ import type { BotCommand } from "../types/command.js";
 import { handleCreatorButton } from "./creatorButtons.js";
 import { handleHelpButton } from "./helpButtons.js";
 import { handleOnboardingButton } from "./onboardingButtons.js";
+import { handleRoleButton } from "./roleButtons.js";
 import { handleTicketButton } from "./ticketButtons.js";
 import { handleVerifyButton } from "./verifyButton.js";
 import {
@@ -43,6 +44,10 @@ export async function routeInteraction(interaction: Interaction, options: Intera
       }
 
       if (await handleCreatorButton(interaction)) {
+        return;
+      }
+
+      if (await handleRoleButton(interaction)) {
         return;
       }
     } catch (error) {
