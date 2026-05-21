@@ -27,7 +27,15 @@ export async function handleRoleButton(interaction: ButtonInteraction) {
     return false;
   }
 
-  const member = await interaction.guild.members.fetch(interaction.user.id);
+  const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+
+  if (!member) {
+    await interaction.reply({
+      embeds: [errorEmbed("KlarBot konnte deinen Server-Nutzer nicht finden. Bitte versuche es erneut.")],
+      ephemeral: true,
+    });
+    return true;
+  }
 
   const result = await toggleCommunityButtonRole(member, definition).catch(async (error) => {
     logger.error(`Rollenbutton fehlgeschlagen: ${definition.name}`, error);

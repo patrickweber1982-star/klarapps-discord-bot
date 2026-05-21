@@ -196,7 +196,13 @@ async function closeTicket(interaction: ButtonInteraction) {
         content: "KlarBot konnte dieses Ticket nicht schließen. Bitte informiere das Team.",
         ephemeral: true,
       });
+      return;
     }
+
+    await interaction.followUp({
+      content: "KlarBot konnte dieses Ticket nicht vollständig schließen. Bitte prüfe Bot-Rechte und Channel-Zugriff.",
+      ephemeral: true,
+    }).catch(() => undefined);
   }
 }
 

@@ -207,6 +207,13 @@ Automatische Setup-Nachrichten:
 
 Der Bot braucht fuer `/setup` insbesondere Rechte zum Verwalten von Rollen, Channels und Nachrichten sowie zum Lesen der Nachrichtenhistorie fuer den Duplicate-Schutz.
 
+Stabilisierung V1:
+
+- `/setup` und `/setup templates:...` pruefen vor dem Start, ob KlarBot Rollen und Channels verwalten sowie Nachrichten senden und lesen kann.
+- Wenn Setup-Nachrichten wegen fehlender Nachrichtenhistorie nicht sicher auf Duplikate geprueft werden koennen, postet KlarBot keine weitere Kopie und loggt eine Warnung.
+- Fehler waehrend Setup oder Creator Template Setup werden als klares Embed beantwortet, statt nur im globalen Error Handler zu landen.
+- Wiederholtes `/setup` bleibt idempotent: bestehende Rollen, Kategorien, Channels und Setup-Nachrichten werden wiederverwendet.
+
 Die Rollenuebersicht in `🎭・rollen` zeigt die wichtigsten Serverrollen und erklaert kurz Founder, Developer, Moderator, Pro Kunde, Beta Tester und Community. Rollenbuttons werden dort noch nicht automatisch gepostet; dafuer steht separat `/roles` bereit.
 
 ## Creator Setup Builder V1
@@ -440,6 +447,8 @@ Das Panel enthaelt diese Rollenbuttons:
 Beim Klick vergibt KlarBot die Rolle. Beim erneuten Klick entfernt KlarBot sie wieder. Fehlende Rollen werden automatisch erstellt und anhand des Rollennamens wiederverwendet, damit keine Duplikate entstehen.
 
 Antworten sind ephemeral, damit der Channel sauber bleibt. Rollenaktionen werden im Terminal mit `[KlarBot] [ROLES]` geloggt. Das System nutzt keine Datenbank, keine API und keine Website-Anbindung. Die Utility-Funktionen sind so aufgebaut, dass `/setup` spaeter automatisch ein Rollen-Panel posten kann.
+
+Wenn KlarBot Rollen nicht erstellen oder verwalten kann, antwortet `/roles` mit einer klaren Bot-Rechte-Meldung. Rollenbutton-Klicks fangen fehlende Guild-Member und Rollenfehler ab, damit keine Interaction abstuerzt.
 
 ## Self-Role-System V1
 

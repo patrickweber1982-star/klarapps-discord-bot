@@ -44,7 +44,7 @@ import type { BotCommand } from "../types/command.js";
 import { primaryButton } from "../utils/components.js";
 import { errorEmbed, successEmbed } from "../utils/embeds.js";
 import { logger as coreLogger } from "../utils/logger.js";
-import { hasAdministrator } from "../utils/permissions.js";
+import { botPermissionMessage, hasAdministrator } from "../utils/permissions.js";
 
 type SetupResult = {
   createdRoles: string[];
@@ -101,6 +101,19 @@ export const setupCommand: BotCommand = {
         return;
       }
 
+      if (!(await botCanRunSetup(interaction.guild))) {
+        await interaction.reply({
+          embeds: [
+            errorEmbed(
+              botPermissionMessage("Rollen und Channels fuer das Creator Setup verwalten"),
+              "Setup nicht moeglich",
+            ),
+          ],
+          ephemeral: true,
+        });
+        return;
+      }
+
       const parsedTemplates = parseTemplateCsv(templateInput);
 
       if (!parsedTemplates.ok || parsedTemplates.keys.length === 0) {
@@ -125,16 +138,28 @@ export const setupCommand: BotCommand = {
 
       await interaction.deferReply({ ephemeral: true });
 
-      const mergedSetup = mergeTemplates(parsedTemplates.keys);
-      const templateResult = await applyTemplateSetup(interaction.guild, mergedSetup);
+      try {
+        const mergedSetup = mergeTemplates(parsedTemplates.keys);
+        const templateResult = await applyTemplateSetup(interaction.guild, mergedSetup);
 
-      logger.success(
-        `Creator Setup abgeschlossen: ${templateResult.createdCategories.length} Kategorien, ${templateResult.createdChannels.length} Channels, ${templateResult.createdRoles.length} Rollen erstellt.`,
-      );
+        logger.success(
+          `Creator Setup abgeschlossen: ${templateResult.createdCategories.length} Kategorien, ${templateResult.createdChannels.length} Channels, ${templateResult.createdRoles.length} Rollen erstellt.`,
+        );
 
-      await interaction.editReply({
-        embeds: [buildTemplateSummaryEmbed(templateResult)],
-      });
+        await interaction.editReply({
+          embeds: [buildTemplateSummaryEmbed(templateResult)],
+        });
+      } catch (error) {
+        coreLogger.error("Creator Setup konnte nicht abgeschlossen werden", error);
+        await interaction.editReply({
+          embeds: [
+            errorEmbed(
+              "KlarBot konnte das Creator Setup nicht vollstaendig ausfuehren. Bitte pruefe Bot-Rolle, Rollenposition und Channel-Berechtigungen.",
+              "Creator Setup fehlgeschlagen",
+            ),
+          ],
+        });
+      }
       return;
     }
 
@@ -146,33 +171,73 @@ export const setupCommand: BotCommand = {
       return;
     }
 
+    if (!(await botCanRunSetup(interaction.guild))) {
+      await interaction.reply({
+        embeds: [
+          errorEmbed(
+            botPermissionMessage("Rollen und Channels fuer /setup verwalten"),
+            "Setup nicht moeglich",
+          ),
+        ],
+        ephemeral: true,
+      });
+      return;
+    }
+
     await interaction.deferReply({ ephemeral: true });
 
-    const result = await setupKlarAppsServer(interaction.guild);
+    try {
+      const result = await setupKlarAppsServer(interaction.guild);
 
-    logger.success(
-      `Setup abgeschlossen: ${result.createdRoles.length} Rollen, ${result.createdCategories.length} Kategorien, ${result.createdChannels.length} Channels, ${result.postedMessages.length} Nachrichten erstellt.`,
-    );
+      logger.success(
+        `Setup abgeschlossen: ${result.createdRoles.length} Rollen, ${result.createdCategories.length} Kategorien, ${result.createdChannels.length} Channels, ${result.postedMessages.length} Nachrichten erstellt.`,
+      );
 
-    await interaction.editReply({
-      embeds: [
-        successEmbed(
-          [
-            "KlarApps Onboarding und Serverstruktur wurden geprueft und aktualisiert.",
-            "",
-            `Rollen erstellt: ${result.createdRoles.length}`,
-            `Kategorien erstellt: ${result.createdCategories.length}`,
-            `Channels erstellt: ${result.createdChannels.length}`,
-            `Setup-Nachrichten erstellt: ${result.postedMessages.length}`,
-            "",
-            `Wiederverwendet: ${result.reusedRoles.length} Rollen, ${result.reusedCategories.length} Kategorien, ${result.reusedChannels.length} Channels, ${result.reusedMessages.length} Nachrichten`,
-          ].join("\n"),
-          "KlarBot Setup abgeschlossen",
-        ),
-      ],
-    });
+      await interaction.editReply({
+        embeds: [
+          successEmbed(
+            [
+              "KlarApps Onboarding und Serverstruktur wurden geprueft und aktualisiert.",
+              "",
+              `Rollen erstellt: ${result.createdRoles.length}`,
+              `Kategorien erstellt: ${result.createdCategories.length}`,
+              `Channels erstellt: ${result.createdChannels.length}`,
+              `Setup-Nachrichten erstellt: ${result.postedMessages.length}`,
+              "",
+              `Wiederverwendet: ${result.reusedRoles.length} Rollen, ${result.reusedCategories.length} Kategorien, ${result.reusedChannels.length} Channels, ${result.reusedMessages.length} Nachrichten`,
+            ].join("\n"),
+            "KlarBot Setup abgeschlossen",
+          ),
+        ],
+      });
+    } catch (error) {
+      coreLogger.error("KlarBot Setup konnte nicht abgeschlossen werden", error);
+      await interaction.editReply({
+        embeds: [
+          errorEmbed(
+            "KlarBot konnte /setup nicht vollstaendig ausfuehren. Bitte pruefe Bot-Rolle, Rollenposition und Channel-Berechtigungen.",
+            "Setup fehlgeschlagen",
+          ),
+        ],
+      });
+    }
   },
 };
+
+async function botCanRunSetup(guild: Guild) {
+  const botMember = guild.members.me ?? (await guild.members.fetchMe().catch(() => null));
+
+  if (!botMember) {
+    return false;
+  }
+
+  return botMember.permissions.has([
+    PermissionFlagsBits.ManageChannels,
+    PermissionFlagsBits.ManageRoles,
+    PermissionFlagsBits.SendMessages,
+    PermissionFlagsBits.ReadMessageHistory,
+  ]);
+}
 
 async function canUseTemplateBuilder(interaction: Parameters<BotCommand["execute"]>[0]["interaction"]) {
   if (hasAdministrator(interaction)) {
@@ -688,6 +753,13 @@ async function ensureUniqueBotMessage(
   label: string,
 ) {
   const messages = await channel.messages.fetch({ limit: 50 }).catch(() => null);
+
+  if (!messages) {
+    coreLogger.warn(`Setup-Nachricht nicht geprueft: ${label} in #${channel.name}`);
+    result.reusedMessages.push(`${label} (nicht geprueft)`);
+    return;
+  }
+
   const alreadyExists = messages?.some((message) => {
     if (!message.author.bot) {
       return false;

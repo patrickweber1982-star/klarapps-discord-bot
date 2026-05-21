@@ -5,7 +5,7 @@ import type { BotCommand } from "../types/command.js";
 import { ensureCommunityButtonRoles } from "../utils/communityRoles.js";
 import { primaryButton, secondaryButton } from "../utils/components.js";
 import { errorEmbed, rolesEmbed } from "../utils/embeds.js";
-import { canModerate, moderationPermissionMessage } from "../utils/permissions.js";
+import { botPermissionMessage, canModerate, moderationPermissionMessage } from "../utils/permissions.js";
 
 export const rolesCommand: BotCommand = {
   name: "roles",
@@ -29,7 +29,20 @@ export const rolesCommand: BotCommand = {
       return;
     }
 
-    await ensureCommunityButtonRoles(interaction.guild);
+    const roles = await ensureCommunityButtonRoles(interaction.guild).catch(() => null);
+
+    if (!roles) {
+      await interaction.reply({
+        embeds: [
+          errorEmbed(
+            botPermissionMessage("Community-Rollen erstellen oder verwalten"),
+            "Rollenpanel nicht erstellt",
+          ),
+        ],
+        ephemeral: true,
+      });
+      return;
+    }
 
     const embed = rolesEmbed(
       [
