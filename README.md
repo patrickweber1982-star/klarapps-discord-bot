@@ -55,6 +55,7 @@ Aktuell werden diese Commands registriert:
 /creator-panel -> Erstellt ein Creator-Panel fuer Streams, Videos, Giveaways und Updates.
 /roles -> Erstellt ein Rollen-Panel fuer Community-, Interessen- und Update-Rollen.
 /roles-panel -> Erstellt das Self-Role-Panel V1.
+/faq -> Sendet eine KlarBot FAQ-Antwort.
 /giveaway -> Erstellt ein einfaches Giveaway.
 /clear -> Loescht Nachrichten.
 /timeout -> Setzt einen Nutzer in Timeout.
@@ -92,7 +93,7 @@ src/
 
 - Modularer Command Handler mit zentraler Command-Map.
 - Event Handler fuer `ready` und `interactionCreate`, vorbereitet fuer weitere Events wie `guildMemberAdd`.
-- Logger mit `info`, `success`, `moderation`, `creator`, `roles`, `giveaway`, `welcome`, `template`, `ticketLog`, `transcript`, `warn`, `error` und `debug`.
+- Logger mit `info`, `success`, `moderation`, `creator`, `roles`, `giveaway`, `welcome`, `template`, `ticketLog`, `transcript`, `faq`, `warn`, `error` und `debug`.
 - Config-System mit Validierung fuer `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID` und `DISCORD_GUILD_ID`.
 - Globales Error Handling fuer `unhandledRejection` und `uncaughtException`.
 - Interaction-Fehler werden sauber als KlarBot-Embed beantwortet, damit keine Discord-Fehlermeldung stehen bleibt.
@@ -119,6 +120,7 @@ Terminal-Logs folgen einem einheitlichen Format:
 [KlarBot] [TEMPLATE] created channel
 [KlarBot] [TICKET_LOG] ticket created
 [KlarBot] [TRANSCRIPT] transcript created
+[KlarBot] [FAQ] faq embed sent
 [KlarBot] [ERROR] Permission fehlgeschlagen
 ```
 
@@ -253,6 +255,30 @@ Unter dem Help-Embed stehen vier Buttons:
 - `Setup`: erklaert den `/setup` Command.
 - `Support`: erklaert den aktuellen Ticket-Einstieg.
 - `Rollen`: erklaert Verify und die spaeter vorbereiteten Rollenbereiche.
+
+## FAQ-System V1
+
+`/faq topic:<thema>` sendet ein modernes KlarBot FAQ-Embed in den aktuellen Channel. Der Command darf nur von Administratoren sowie `ðŸ‘‘ Founder` und `ðŸ› ï¸ Developer` genutzt werden.
+
+Verfuegbare FAQ-Themen:
+
+- `verify` erklaert Regeln akzeptieren, Community freischalten und Rollen erhalten.
+- `tickets` erklaert Support, Ticket-Erstellung und wann Tickets sinnvoll sind.
+- `giveaway` erklaert Teilnahme, Gewinnerauswahl und Giveaway-Rollen.
+- `roles` erklaert Rollenbuttons, Ping-Rollen und Interessenrollen.
+- `creator` erklaert Creator Templates, Twitch/YouTube Setup und Community-Funktionen.
+
+Aliases wie `setup`, `support`, `ticket`, `rollen` und `templates` werden auf passende Themen gemappt. Unbekannte Themen werden freundlich ephemeral beantwortet und im Terminal mit `[KlarBot] [FAQ]` geloggt.
+
+Dateien:
+
+- `src/features/faq/faqConfig.ts`
+- `src/features/faq/faqEmbeds.ts`
+- `src/features/faq/faqCommand.ts`
+- `src/features/faq/faqLogger.ts`
+- `src/features/faq/types.ts`
+
+Das FAQ-System ist statisch und config-basiert. Es nutzt keine Datenbank, kein Dashboard, keine Suche und keine AI.
 
 ## Verify Command
 

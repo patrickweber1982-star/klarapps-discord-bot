@@ -9,6 +9,7 @@ type LogLevel =
   | "template"
   | "ticketLog"
   | "transcript"
+  | "faq"
   | "warn"
   | "error"
   | "debug";
@@ -24,6 +25,7 @@ const levelColors: Record<LogLevel, string> = {
   template: "\x1b[94m",
   ticketLog: "\x1b[96m",
   transcript: "\x1b[92m",
+  faq: "\x1b[36m",
   warn: "\x1b[33m",
   error: "\x1b[31m",
   debug: "\x1b[90m",
@@ -40,6 +42,7 @@ const levelLabels: Record<LogLevel, string> = {
   template: "TEMPLATE",
   ticketLog: "TICKET_LOG",
   transcript: "TRANSCRIPT",
+  faq: "FAQ",
   warn: "WARN",
   error: "ERROR",
   debug: "DEBUG",
@@ -110,6 +113,10 @@ export const logger = {
 
   transcript(message: string, meta?: unknown) {
     writeLog("transcript", console.info, message, meta);
+  },
+
+  faq(message: string, meta?: unknown) {
+    writeLog("faq", console.info, message, meta);
   },
 
   warn(message: string, meta?: unknown) {

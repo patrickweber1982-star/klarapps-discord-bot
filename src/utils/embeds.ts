@@ -18,6 +18,7 @@ const klarAppsBrand = {
     giveawayWinner: 0x22c55e,
     roles: 0x8b5cf6,
     community: 0x22c55e,
+    faq: 0x06b6d4,
   },
 };
 
@@ -86,4 +87,8 @@ export function rolesEmbed(description: string, title = "Community Rollen") {
 
 export function communityEmbed(description: string, title = "Community") {
   return baseEmbed(title, description, "community");
+}
+
+export function faqEmbed(description: string, title = "FAQ") {
+  return baseEmbed(title, description, "faq");
 }
