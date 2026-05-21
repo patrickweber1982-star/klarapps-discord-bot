@@ -92,7 +92,7 @@ src/
 
 - Modularer Command Handler mit zentraler Command-Map.
 - Event Handler fuer `ready` und `interactionCreate`, vorbereitet fuer weitere Events wie `guildMemberAdd`.
-- Logger mit `info`, `success`, `moderation`, `creator`, `roles`, `giveaway`, `welcome`, `template`, `ticketLog`, `warn`, `error` und `debug`.
+- Logger mit `info`, `success`, `moderation`, `creator`, `roles`, `giveaway`, `welcome`, `template`, `ticketLog`, `transcript`, `warn`, `error` und `debug`.
 - Config-System mit Validierung fuer `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID` und `DISCORD_GUILD_ID`.
 - Globales Error Handling fuer `unhandledRejection` und `uncaughtException`.
 - Interaction-Fehler werden sauber als KlarBot-Embed beantwortet, damit keine Discord-Fehlermeldung stehen bleibt.
@@ -118,6 +118,7 @@ Terminal-Logs folgen einem einheitlichen Format:
 [KlarBot] [WELCOME] user joined
 [KlarBot] [TEMPLATE] created channel
 [KlarBot] [TICKET_LOG] ticket created
+[KlarBot] [TRANSCRIPT] transcript created
 [KlarBot] [ERROR] Permission fehlgeschlagen
 ```
 
@@ -311,13 +312,32 @@ Ticket Logs V1:
 - Ticket-Fehler werden als Warn-Embed gepostet, falls der Log-Channel erreichbar ist.
 - Wenn der Log-Channel fehlt oder Bot-Rechte fehlen, crasht KlarBot nicht und loggt eine Warnung im Terminal.
 - Es werden nur Metadaten geloggt: User, Channel, Zeit, Guild, Aktion und Tickettyp bzw. Grund.
-- Es gibt noch keinen Transcript Export, keine Ticket-History und keine Datenbank.
+- Es gibt keine Ticket-History und keine Datenbank.
+
+Transcript Export V1:
+
+- Beim Schliessen eines Tickets erstellt KlarBot automatisch ein Markdown-Transcript.
+- Das Transcript wird als Datei in `ðŸ“‹ãƒ»ticket-logs` gepostet.
+- Der Export enthaelt Ticketname, Guild, Ersteller, schliessende Person, Exportzeit, Channelname und den Nachrichtenverlauf.
+- Nachrichten werden chronologisch als `[HH:MM] Username:` formatiert.
+- Attachments werden nur als Links gespeichert; Dateien werden nicht heruntergeladen.
+- Systemnachrichten werden ignoriert.
+- Falls der Log-Channel fehlt oder Upload-Rechte fehlen, wird sauber im Terminal geloggt und das Ticket trotzdem geschlossen.
+- V1 exportiert die letzten 100 Nachrichten, damit keine API-Spam-Loesung entsteht.
+- Es gibt keinen HTML-Export, keine Webansicht, kein Cloud Storage und keine Datenbank.
 
 Ticket-Log-Dateien:
 
 - `src/features/tickets/ticketLogService.ts`
 - `src/features/tickets/ticketLogEmbeds.ts`
 - `src/features/tickets/ticketLogger.ts`
+
+Transcript-Dateien:
+
+- `src/features/tickets/transcripts/transcriptBuilder.ts`
+- `src/features/tickets/transcripts/transcriptFormatter.ts`
+- `src/features/tickets/transcripts/transcriptLogger.ts`
+- `src/features/tickets/transcripts/transcriptUploader.ts`
 
 Das Ticket-System V1 nutzt keine Datenbank, kein Webpanel, keine AI und keine Analytics.
 

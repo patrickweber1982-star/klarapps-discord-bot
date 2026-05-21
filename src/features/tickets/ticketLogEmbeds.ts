@@ -54,7 +54,7 @@ export function buildTicketClosedLogEmbed(options: TicketClosedEmbedOptions) {
       `**Grund:** ${options.reason ?? "Ticket geschlossen"}`,
       "",
       "**Status:** geschlossen",
-      "**Hinweis:** Es wurden keine Ticket-Inhalte gespeichert.",
+      "**Hinweis:** Das Transcript wird separat als Markdown-Datei gesendet, sofern moeglich.",
     ].join("\n"),
     "🔒 Ticket geschlossen",
   );

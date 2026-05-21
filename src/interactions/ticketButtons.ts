@@ -6,6 +6,8 @@ import {
   logTicketCreatedEvent,
   logTicketErrorEvent,
 } from "../features/tickets/ticketLogService.js";
+import { buildTicketTranscript } from "../features/tickets/transcripts/transcriptBuilder.js";
+import { uploadTicketTranscript } from "../features/tickets/transcripts/transcriptUploader.js";
 import { dangerButton, secondaryButton } from "../utils/components.js";
 import { infoEmbed, successEmbed } from "../utils/embeds.js";
 import {
@@ -144,6 +146,30 @@ async function closeTicket(interaction: ButtonInteraction) {
     await interaction.reply({
       embeds: [successEmbed("Ticket wird geschlossen...")],
     });
+
+    try {
+      const transcript = await buildTicketTranscript({
+        channel: interaction.channel,
+        guildName: interaction.guild.name,
+        createdBy: openerUser?.tag ?? (openerId ? `User ${openerId}` : "Unbekannt"),
+        closedBy: interaction.user.tag,
+      });
+
+      await uploadTicketTranscript({
+        guild: interaction.guild,
+        transcript,
+        ticketUser: openerUser,
+        closedBy: interaction.user,
+      });
+    } catch (transcriptError) {
+      await logTicketErrorEvent({
+        guild: interaction.guild,
+        action: "Transcript erstellen",
+        errorReason: getErrorMessage(transcriptError),
+        user: openerUser,
+        channel: interaction.channel,
+      });
+    }
 
     await logTicketClosedEvent({
       guild: interaction.guild,
