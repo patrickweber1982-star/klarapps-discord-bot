@@ -19,7 +19,7 @@ export const creatorTemplates: Record<TemplateKey, CreatorTemplateDefinition> = 
     roles: [
       { name: "🔴 Live Ping", color: 0xef4444 },
       { name: "💜 Twitch Zuschauer", color: 0x9146ff },
-      { name: "⭐ Stammzuschauer", color: 0xfacc15 },
+      { name: "⭐ Stammzuschauer", color: 0xfacc15, hoist: true },
       { name: "🎮 Gamer", color: 0x22c55e },
     ],
   },
@@ -41,7 +41,7 @@ export const creatorTemplates: Record<TemplateKey, CreatorTemplateDefinition> = 
       { name: "🔔 Video Ping", color: 0xef4444 },
       { name: "🎥 YouTube Zuschauer", color: 0xff0000 },
       { name: "💡 Ideen-Geber", color: 0xf59e0b },
-      { name: "⭐ Stammzuschauer", color: 0xfacc15 },
+      { name: "⭐ Stammzuschauer", color: 0xfacc15, hoist: true },
     ],
   },
   indiedev: {

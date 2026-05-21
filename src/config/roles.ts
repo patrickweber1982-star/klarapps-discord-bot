@@ -1,5 +1,3 @@
-import { PermissionFlagsBits } from "discord.js";
-
 export type ManagedRoleKey =
   | "rulesAccepted"
   | "community"
@@ -13,6 +11,7 @@ export type ManagedRoleDefinition = {
   name: string;
   color: number;
   permissions: bigint[];
+  hoist?: boolean;
 };
 
 export const managedRoles: Record<ManagedRoleKey, ManagedRoleDefinition> = {
@@ -33,12 +32,14 @@ export const managedRoles: Record<ManagedRoleKey, ManagedRoleDefinition> = {
     name: "💎 Pro Kunde",
     color: 0x9b59b6,
     permissions: [],
+    hoist: true,
   },
   betaTester: {
     key: "betaTester",
     name: "🧪 Beta Tester",
     color: 0x3498db,
     permissions: [],
+    hoist: true,
   },
   customer: {
     key: "customer",
@@ -55,9 +56,9 @@ export const managedRoles: Record<ManagedRoleKey, ManagedRoleDefinition> = {
 };
 
 export const setupRoleDefinitions = [
-  { name: "👑 Founder", color: 0xf5c542, permissions: [PermissionFlagsBits.Administrator] },
-  { name: "🛠️ Developer", color: 0x5865f2, permissions: [PermissionFlagsBits.ManageGuild] },
-  { name: "🤝 Moderator", color: 0x57f287, permissions: [PermissionFlagsBits.ManageMessages] },
+  { name: "👑 Founder", color: 0xf5c542, permissions: [], hoist: true },
+  { name: "🛠️ Developer", color: 0x5865f2, permissions: [], hoist: true },
+  { name: "🤝 Moderator", color: 0x57f287, permissions: [], hoist: true },
   managedRoles.proCustomer,
   managedRoles.betaTester,
   managedRoles.rulesAccepted,

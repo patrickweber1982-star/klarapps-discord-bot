@@ -11,6 +11,7 @@ import { timeoutCommand } from "./timeout.js";
 import { verifyCommand } from "./verify.js";
 import { faqCommand } from "../features/faq/faqCommand.js";
 import { rolesPanelCommand } from "../features/roles/rolesPanel.js";
+import { resetServerCommand } from "../features/reset/resetCommand.js";
 import type { BotCommand } from "../types/command.js";
 
 export const commandList = [
@@ -27,6 +28,7 @@ export const commandList = [
   clearCommand,
   timeoutCommand,
   kickCommand,
+  resetServerCommand,
 ] satisfies BotCommand[];
 
 export function createCommandMap(commands: BotCommand[] = commandList) {

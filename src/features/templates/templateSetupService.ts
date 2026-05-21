@@ -24,6 +24,14 @@ export async function applyTemplateSetup(
     const existingRole = guild.roles.cache.find((guildRole) => guildRole.name === role.name);
 
     if (existingRole) {
+      if (existingRole.editable && (existingRole.hoist !== Boolean(role.hoist) || existingRole.color !== role.color)) {
+        await existingRole.edit({
+          color: role.color,
+          hoist: Boolean(role.hoist),
+          reason: "KlarBot Template Setup: Rollenanzeige aktualisieren",
+        }).catch(() => undefined);
+      }
+
       result.skippedRoles.push(role.name);
       logSkipped("role", role.name);
       continue;
@@ -33,6 +41,7 @@ export async function applyTemplateSetup(
       name: role.name,
       color: role.color,
       permissions: [],
+      hoist: Boolean(role.hoist),
       reason: "KlarBot Template Setup: Rolle erstellen",
     });
 

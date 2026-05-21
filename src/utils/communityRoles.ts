@@ -14,6 +14,7 @@ export async function ensureCommunityButtonRole(
   const existingRole = guild.roles.cache.find((role) => role.name === definition.name);
 
   if (existingRole) {
+    await updateCommunityRoleDisplay(existingRole, definition);
     return existingRole;
   }
 
@@ -21,6 +22,7 @@ export async function ensureCommunityButtonRole(
     name: definition.name,
     color: definition.color,
     permissions: [],
+    hoist: Boolean(definition.hoist),
     reason: `KlarBot Rollenbutton: ${definition.name}`,
   });
 }
@@ -48,4 +50,25 @@ export async function toggleCommunityButtonRole(
 
   await member.roles.add(role, "KlarBot Rollenbutton: Rolle vergeben");
   return { role, assigned: true };
+}
+
+async function updateCommunityRoleDisplay(
+  role: Role,
+  definition: CommunityRoleDefinition,
+) {
+  const shouldHoist = Boolean(definition.hoist);
+
+  if (role.hoist === shouldHoist && role.color === definition.color) {
+    return;
+  }
+
+  if (!role.editable) {
+    return;
+  }
+
+  await role.edit({
+    color: definition.color,
+    hoist: shouldHoist,
+    reason: `KlarBot Rollenbutton: ${definition.name}`,
+  }).catch(() => undefined);
 }

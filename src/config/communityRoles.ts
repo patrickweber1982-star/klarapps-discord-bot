@@ -7,6 +7,7 @@ export type CommunityRoleDefinition = {
   name: string;
   color: number;
   description: string;
+  hoist?: boolean;
 };
 
 export const communityRoleDefinitions: Record<CommunityRoleKey, CommunityRoleDefinition> = {
@@ -17,6 +18,7 @@ export const communityRoleDefinitions: Record<CommunityRoleKey, CommunityRoleDef
     name: "🎬 Creator",
     color: 0xec4899,
     description: "Content, Streams, Videos und Creator-Austausch.",
+    hoist: true,
   },
   coding: {
     key: "coding",

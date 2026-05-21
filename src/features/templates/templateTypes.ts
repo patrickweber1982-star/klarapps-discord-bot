@@ -11,6 +11,7 @@ export type TemplateChannelDefinition = {
 export type TemplateRoleDefinition = {
   name: string;
   color: number;
+  hoist?: boolean;
 };
 
 export type CreatorTemplateDefinition = {

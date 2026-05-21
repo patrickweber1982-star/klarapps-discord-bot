@@ -60,6 +60,7 @@ Aktuell werden diese Commands registriert:
 /clear -> Loescht Nachrichten.
 /timeout -> Setzt einen Nutzer in Timeout.
 /kick -> Kickt einen Nutzer.
+/reset-server -> Entfernt bekannte KlarBot Rollen, Channels und Kategorien.
 ```
 
 ## Entwicklung
@@ -121,6 +122,7 @@ Terminal-Logs folgen einem einheitlichen Format:
 [KlarBot] [TICKET_LOG] ticket created
 [KlarBot] [TRANSCRIPT] transcript created
 [KlarBot] [FAQ] faq embed sent
+[KlarBot] [RESET] reset completed
 [KlarBot] [ERROR] Permission fehlgeschlagen
 ```
 
@@ -213,6 +215,17 @@ Stabilisierung V1:
 - Wenn Setup-Nachrichten wegen fehlender Nachrichtenhistorie nicht sicher auf Duplikate geprueft werden koennen, postet KlarBot keine weitere Kopie und loggt eine Warnung.
 - Fehler waehrend Setup oder Creator Template Setup werden als klares Embed beantwortet, statt nur im globalen Error Handler zu landen.
 - Wiederholtes `/setup` bleibt idempotent: bestehende Rollen, Kategorien, Channels und Setup-Nachrichten werden wiederverwendet.
+
+Sichtbare Hauptrollen:
+
+- `👑 Founder`
+- `🛠️ Developer`
+- `🤝 Moderator`
+- `💎 Pro Kunde`
+- `🧪 Beta Tester`
+- optional sichtbare Creator-Rollen wie `🎬 Creator` und `⭐ Stammzuschauer`
+
+KlarBot setzt fuer diese Rollen `hoist: true`, damit sie separat in der Discord-Mitgliederliste erscheinen. Bestehende Rollen werden beim Setup farblich und fuer die Mitgliederlisten-Anzeige aktualisiert, sofern die Bot-Rolle hoch genug steht. Gefaehrliche Admin-Rechte werden dabei nicht automatisch vergeben.
 
 Die Rollenuebersicht in `🎭・rollen` zeigt die wichtigsten Serverrollen und erklaert kurz Founder, Developer, Moderator, Pro Kunde, Beta Tester und Community. Rollenbuttons werden dort noch nicht automatisch gepostet; dafuer steht separat `/roles` bereit.
 
@@ -396,6 +409,34 @@ KlarBot prueft bei `/timeout` und `/kick`, ob der Server-Owner betroffen ist, ob
 Mod-Logs: `/setup` legt optional `👮 MODERATION` und `📋・mod-logs` ohne Duplikate an. Wenn der Channel vorhanden ist, schreibt KlarBot Moderationsaktionen dort als Embed. Wenn der Channel fehlt, wird nur im Terminal mit `[KlarBot] [MODERATION]` geloggt.
 
 Ticket-Kompatibilitaet: Founder, Developer und Moderator sehen private Tickets weiterhin und koennen sie moderieren.
+
+## Server Reset V1
+
+`/reset-server` entfernt bekannte KlarBot-Elemente aus dem Server. Der Command darf nur von Administratoren sowie `👑 Founder` und `🛠️ Developer` genutzt werden.
+
+Sicherheitsmodus:
+
+- Ohne `confirm:true` wird nichts geloescht.
+- Geloescht werden nur Namen aus den KlarBot-Whitelists.
+- Offene Ticket-Channels werden nur geloescht, wenn ihr Topic den KlarBot-Ticket-Praefix nutzt.
+- `@everyone`, verwaltete Rollen, Systemrollen und unbekannte/fremde Elemente werden nicht geloescht.
+- Der Channel, in dem der Reset ausgefuehrt wird, wird uebersprungen, damit KlarBot den Abschluss sicher melden kann.
+
+Delete-Reihenfolge:
+
+1. Text- und Ticket-Channels
+2. Voice-Channels
+3. Kategorien
+4. Rollen
+
+Logs laufen ueber `[KlarBot] [RESET]` und enthalten Start, geloeschte Channels, Kategorien, Rollen, uebersprungene Elemente und Abschluss. Der Reset nutzt keine Datenbank, kein Backup, kein Restore-System und kein Dashboard.
+
+Dateien:
+
+- `src/features/reset/resetCommand.ts`
+- `src/features/reset/resetService.ts`
+- `src/features/reset/resetLogger.ts`
+- `src/features/reset/resetConfig.ts`
 
 ## Creator BASIC
 

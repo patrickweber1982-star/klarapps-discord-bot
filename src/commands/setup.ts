@@ -309,6 +309,7 @@ async function ensureRoles(guild: Guild, result: SetupResult): Promise<SetupRole
     const existingRole = guild.roles.cache.find((role) => role.name === roleDefinition.name);
 
     if (existingRole) {
+      await updateVisibleRoleSettings(existingRole, roleDefinition);
       result.reusedRoles.push(roleDefinition.name);
       continue;
     }
@@ -317,6 +318,7 @@ async function ensureRoles(guild: Guild, result: SetupResult): Promise<SetupRole
       name: roleDefinition.name,
       color: roleDefinition.color,
       permissions: roleDefinition.permissions,
+      hoist: Boolean("hoist" in roleDefinition && roleDefinition.hoist),
       reason: "KlarBot Setup: KlarApps Rollenstruktur",
     });
 
@@ -333,6 +335,36 @@ async function ensureRoles(guild: Guild, result: SetupResult): Promise<SetupRole
     teamRoles: ticketStaffRoleNames.map((roleName) => findRoleOrThrow(guild, roleName)),
     supportRoles: findOptionalRoles(guild, ["🤝 Supporter"]),
   };
+}
+
+async function updateVisibleRoleSettings(
+  role: Role,
+  roleDefinition: (typeof setupRoleDefinitions)[number],
+) {
+  const shouldHoist = Boolean("hoist" in roleDefinition && roleDefinition.hoist);
+  const needsUpdate = (
+    role.hoist !== shouldHoist ||
+    role.color !== roleDefinition.color ||
+    !role.permissions.equals(roleDefinition.permissions)
+  );
+
+  if (!needsUpdate) {
+    return;
+  }
+
+  if (!role.editable) {
+    coreLogger.warn(`Rolle konnte nicht sichtbar aktualisiert werden: ${role.name}`);
+    return;
+  }
+
+  await role.edit({
+    color: roleDefinition.color,
+    hoist: shouldHoist,
+    permissions: roleDefinition.permissions,
+    reason: "KlarBot Setup: Rollenanzeige aktualisieren",
+  }).catch((error) => {
+    coreLogger.warn(`Rollenanzeige nicht aktualisiert: ${role.name}`, error);
+  });
 }
 
 async function ensureRoleOrder(guild: Guild) {
