@@ -29,13 +29,20 @@ import {
   buildWelcomeChannelEmbed,
 } from "../features/welcome/welcomeEmbeds.js";
 import {
+  getAvailableTemplateText,
+  mergeTemplates,
+  parseTemplateCsv,
+} from "../features/templates/templateMergeService.js";
+import { applyTemplateSetup } from "../features/templates/templateSetupService.js";
+import type { TemplateSetupResult } from "../features/templates/templateTypes.js";
+import {
   managedRoles,
   setupRoleDefinitions,
   ticketStaffRoleNames,
 } from "../config/roles.js";
 import type { BotCommand } from "../types/command.js";
 import { primaryButton } from "../utils/components.js";
-import { successEmbed } from "../utils/embeds.js";
+import { errorEmbed, successEmbed } from "../utils/embeds.js";
 import { logger as coreLogger } from "../utils/logger.js";
 import { hasAdministrator } from "../utils/permissions.js";
 
@@ -63,12 +70,69 @@ export const setupCommand: BotCommand = {
   data: new SlashCommandBuilder()
     .setName("setup")
     .setDescription("Erstellt die KlarApps Discord-Grundstruktur.")
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    .addStringOption((option) =>
+      option
+        .setName("templates")
+        .setDescription("Optionale Creator Templates als CSV: twitch,youtube,indiedev,support")
+        .setRequired(false),
+    ),
   async execute({ interaction, logger }) {
     if (!interaction.guild) {
       await interaction.reply({
         content: "Dieser Command kann nur auf einem Discord-Server genutzt werden.",
         ephemeral: true,
+      });
+      return;
+    }
+
+    const templateInput = interaction.options.getString("templates");
+
+    if (templateInput) {
+      if (!(await canUseTemplateBuilder(interaction))) {
+        await interaction.reply({
+          embeds: [
+            errorEmbed(
+              "Du brauchst Administratorrechte oder die Rolle 👑 Founder bzw. 🛠️ Developer, um Creator Templates zu erstellen.",
+            ),
+          ],
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const parsedTemplates = parseTemplateCsv(templateInput);
+
+      if (!parsedTemplates.ok || parsedTemplates.keys.length === 0) {
+        await interaction.reply({
+          embeds: [
+            errorEmbed(
+              [
+                parsedTemplates.invalidKeys.length
+                  ? `Unbekannte Templates: ${parsedTemplates.invalidKeys.join(", ")}`
+                  : "Bitte gib mindestens ein Template an.",
+                "",
+                `Verfügbar: ${getAvailableTemplateText()}`,
+                "Beispiel: `twitch,youtube,indiedev`",
+              ].join("\n"),
+              "Creator Setup nicht gestartet",
+            ),
+          ],
+          ephemeral: true,
+        });
+        return;
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+
+      const mergedSetup = mergeTemplates(parsedTemplates.keys);
+      const templateResult = await applyTemplateSetup(interaction.guild, mergedSetup);
+
+      logger.success(
+        `Creator Setup abgeschlossen: ${templateResult.createdCategories.length} Kategorien, ${templateResult.createdChannels.length} Channels, ${templateResult.createdRoles.length} Rollen erstellt.`,
+      );
+
+      await interaction.editReply({
+        embeds: [buildTemplateSummaryEmbed(templateResult)],
       });
       return;
     }
@@ -108,6 +172,48 @@ export const setupCommand: BotCommand = {
     });
   },
 };
+
+async function canUseTemplateBuilder(interaction: Parameters<BotCommand["execute"]>[0]["interaction"]) {
+  if (hasAdministrator(interaction)) {
+    return true;
+  }
+
+  const member = await interaction.guild?.members.fetch(interaction.user.id).catch(() => null);
+
+  if (!member) {
+    return false;
+  }
+
+  return ["👑 Founder", "🛠️ Developer"].some((roleName) =>
+    member.roles.cache.some((role) => role.name === roleName),
+  );
+}
+
+function buildTemplateSummaryEmbed(result: TemplateSetupResult) {
+  return successEmbed(
+    [
+      `**Templates:** ${result.selectedTemplates.join(", ")}`,
+      "",
+      `**Kategorien erstellt:** ${result.createdCategories.length}`,
+      result.createdCategories.length ? result.createdCategories.join("\n") : "Keine",
+      "",
+      `**Channels erstellt:** ${result.createdChannels.length}`,
+      result.createdChannels.length ? result.createdChannels.join("\n") : "Keine",
+      "",
+      `**Rollen erstellt:** ${result.createdRoles.length}`,
+      result.createdRoles.length ? result.createdRoles.join("\n") : "Keine",
+      "",
+      `**Übersprungen:** ${result.skippedCategories.length} Kategorien, ${result.skippedChannels.length} Channels, ${result.skippedRoles.length} Rollen`,
+      "",
+      "**Nächste Schritte**",
+      "• `/roles-panel` senden",
+      "• Giveaway testen",
+      "• Verify prüfen",
+      "• Tickets prüfen",
+    ].join("\n"),
+    "✅ Creator Setup erfolgreich erstellt",
+  );
+}
 
 async function setupKlarAppsServer(guild: Guild): Promise<SetupResult> {
   const result: SetupResult = {

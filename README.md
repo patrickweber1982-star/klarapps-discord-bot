@@ -48,7 +48,7 @@ Aktuell werden diese Commands registriert:
 
 ```txt
 /klarbot -> KlarBot ist online. KlarApps Systeme bereit.
-/setup -> Erstellt die KlarApps Discord-Grundstruktur. Nur fuer Administratoren.
+/setup -> Erstellt die KlarApps Discord-Grundstruktur oder Creator Templates per CSV.
 /help -> Zeigt die KlarBot Hilfe und verfuegbaren Funktionen.
 /verify -> Erstellt ein Verify-Panel fuer neue Mitglieder.
 /tickets -> Erstellt ein Ticket-Panel fuer Support, Bugs und Feature-Wuensche.
@@ -92,7 +92,7 @@ src/
 
 - Modularer Command Handler mit zentraler Command-Map.
 - Event Handler fuer `ready` und `interactionCreate`, vorbereitet fuer weitere Events wie `guildMemberAdd`.
-- Logger mit `info`, `success`, `moderation`, `creator`, `roles`, `giveaway`, `welcome`, `warn`, `error` und `debug`.
+- Logger mit `info`, `success`, `moderation`, `creator`, `roles`, `giveaway`, `welcome`, `template`, `warn`, `error` und `debug`.
 - Config-System mit Validierung fuer `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID` und `DISCORD_GUILD_ID`.
 - Globales Error Handling fuer `unhandledRejection` und `uncaughtException`.
 - Interaction-Fehler werden sauber als KlarBot-Embed beantwortet, damit keine Discord-Fehlermeldung stehen bleibt.
@@ -116,6 +116,7 @@ Terminal-Logs folgen einem einheitlichen Format:
 [KlarBot] [ROLES] Rolle vergeben
 [KlarBot] [GIVEAWAY] Gewinner gezogen
 [KlarBot] [WELCOME] user joined
+[KlarBot] [TEMPLATE] created channel
 [KlarBot] [ERROR] Permission fehlgeschlagen
 ```
 
@@ -202,6 +203,42 @@ Automatische Setup-Nachrichten:
 Der Bot braucht fuer `/setup` insbesondere Rechte zum Verwalten von Rollen, Channels und Nachrichten sowie zum Lesen der Nachrichtenhistorie fuer den Duplicate-Schutz.
 
 Die Rollenuebersicht in `🎭・rollen` zeigt die wichtigsten Serverrollen und erklaert kurz Founder, Developer, Moderator, Pro Kunde, Beta Tester und Community. Rollenbuttons werden dort noch nicht automatisch gepostet; dafuer steht separat `/roles` bereit.
+
+## Creator Setup Builder V1
+
+`/setup` kann optional statische Creator-/Community-Templates erstellen:
+
+```txt
+/setup templates:twitch
+/setup templates:youtube
+/setup templates:twitch,youtube
+/setup templates:twitch,youtube,indiedev
+/setup templates:support
+```
+
+Unterstuetzte Templates:
+
+- `twitch` fuer Twitch Creator
+- `youtube` fuer YouTube Creator
+- `indiedev` fuer Indie-Dev-Communities
+- `support` fuer Support-Server
+
+Mehrere Templates werden zusammengefuehrt. Kategorien, Channels und Rollen werden nach Namen dedupliziert. Wenn z. B. `💬・allgemein`, `🎫・support` oder `⭐ Stammzuschauer` in mehreren Templates vorkommen, erstellt KlarBot sie nur einmal.
+
+Duplicate Protection:
+
+- bestehende Kategorien werden uebersprungen
+- bestehende Channels werden uebersprungen
+- bestehende Rollen werden uebersprungen
+- alle Schritte werden mit `[KlarBot] [TEMPLATE]` geloggt
+
+Nach dem Template-Setup zeigt KlarBot ein Summary-Embed mit gewaehlten Templates, erstellten Elementen und uebersprungenen Elementen. Als naechste Schritte werden `/roles-panel`, Giveaway, Verify und Tickets empfohlen.
+
+Sicherheit:
+
+- Template-Setup darf nur von Administratoren, `👑 Founder` oder `🛠️ Developer` genutzt werden.
+- Template-Rollen bekommen keine Admin- oder gefaehrlichen Permissions.
+- Es gibt keine Datenbank, kein Dashboard, keinen Wizard und keine dynamischen Custom Templates.
 
 ## Help Command
 
