@@ -96,17 +96,46 @@ src/
 - UI-Component-Helfer fuer Buttons, Dropdowns und Modals.
 - Interaction Router fuer Slash Commands, Buttons, Dropdowns und Modals.
 
-## Setup Command
+## Setup Command und Onboarding
 
-`/setup` erstellt eine einfache KlarApps Discordstruktur ohne Duplikate. Bestehende Rollen, Kategorien und Channels werden anhand ihrer Namen erkannt und wiederverwendet.
+`/setup` erstellt die KlarApps Discordstruktur ohne Duplikate und richtet den Onboarding-Flow ein. Bestehende Rollen, Kategorien, Channels und Setup-Nachrichten werden anhand ihrer Namen, Buttons oder Marker erkannt und wiederverwendet.
 
 Erstellt werden:
 
-- Kategorien fuer Start, Community, Support und KlarApps.
-- Textchannels fuer Willkommen, Ankuendigungen, Regeln, Community, Support, Bug Reports und Produktbereiche.
-- Rollen fuer Founder, Developer, Moderator, Pro und Community.
+- `📢 INFO` mit Regeln, KlarBot-Erklaerung, Willkommen, Ankuendigungen und Roadmap.
+- `💬 COMMUNITY` mit Allgemein, Ideen/Feedback, Showcase und Community-Hilfe.
+- `🛠️ SUPPORT` mit Support, Bug Reports und Feature-Wuenschen.
+- `🤖 KLARAPPS` mit Produktbereichen.
+- `🔒 KUNDENBEREICH` mit Downloads, Pro Features und Beta Tests.
+- Rollen fuer Founder, Developer, Moderator, Pro Kunde, Beta Tester, Regeln akzeptiert und Community.
 
-Nur Administratoren koennen `/setup` ausfuehren. Start- und Info-Channels werden fuer die Community-Rolle lesbar, aber nicht beschreibbar angelegt. Community-, Support- und KlarApps-Bereiche sind fuer die Community-Rolle normal schreibbar.
+Nur Administratoren koennen `/setup` ausfuehren.
+
+Onboarding-Flow:
+
+1. Neue Nutzer ohne Rolle sehen nur `📜・regeln`.
+2. Dort bestaetigen sie `✅ Regeln akzeptieren` und erhalten `📘 Regeln akzeptiert`.
+3. Danach sehen sie `🤖・so-funktioniert-klarbot`.
+4. Dort klicken sie `🚀 Community freischalten` und erhalten `👤 Community`.
+5. Danach sehen sie die normalen Community-, Support- und KlarApps-Bereiche.
+
+Permissions:
+
+- `@everyone` sieht am Anfang nur `📜・regeln`.
+- `🤖・so-funktioniert-klarbot` ist nur fuer `📘 Regeln akzeptiert` und Teamrollen sichtbar.
+- Community-Bereiche sind fuer `👤 Community` und Teamrollen sichtbar.
+- Kundenbereiche sind fuer `💎 Pro Kunde`, `🧪 Beta Tester` und Teamrollen sichtbar.
+- Info-Channels sind fuer Community lesbar, aber nur Teamrollen duerfen schreiben.
+- Teamrollen sind `👑 Founder`, `🛠️ Developer` und `🤝 Moderator`.
+
+Automatische Setup-Nachrichten:
+
+- Regel-Embed mit Button in `📜・regeln`.
+- KlarBot-Erklaerung mit Button in `🤖・so-funktioniert-klarbot`.
+- Willkommens-Embed in `👋・willkommen`.
+- Support-Hinweis in `🎫・support`.
+
+Der Bot braucht fuer `/setup` insbesondere Rechte zum Verwalten von Rollen, Channels und Nachrichten sowie zum Lesen der Nachrichtenhistorie fuer den Duplicate-Schutz.
 
 ## Help Command
 
@@ -121,7 +150,7 @@ Unter dem Help-Embed stehen vier Buttons:
 
 ## Verify Command
 
-`/verify` erstellt ein modernes Verify-Panel fuer neue Mitglieder. Der Command darf nur von Administratoren oder Nutzern mit `Manage Guild` genutzt werden.
+`/verify` erstellt ein modernes Verify-Panel fuer neue Mitglieder. Der Command darf nur von Administratoren oder Nutzern mit `Manage Guild` genutzt werden. Der neue Onboarding-Flow ueber `/setup` ist der empfohlene Weg; `/verify` bleibt als einfacher Community-Freischaltcommand verfuegbar.
 
 Das Panel kann in diesen Channels erstellt werden:
 

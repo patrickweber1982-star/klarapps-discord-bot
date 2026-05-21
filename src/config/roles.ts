@@ -1,6 +1,12 @@
 import { PermissionFlagsBits } from "discord.js";
 
-export type ManagedRoleKey = "community" | "pro" | "beta" | "customer" | "license";
+export type ManagedRoleKey =
+  | "rulesAccepted"
+  | "community"
+  | "proCustomer"
+  | "betaTester"
+  | "customer"
+  | "license";
 
 export type ManagedRoleDefinition = {
   key: ManagedRoleKey;
@@ -10,21 +16,27 @@ export type ManagedRoleDefinition = {
 };
 
 export const managedRoles: Record<ManagedRoleKey, ManagedRoleDefinition> = {
+  rulesAccepted: {
+    key: "rulesAccepted",
+    name: "📘 Regeln akzeptiert",
+    color: 0x3498db,
+    permissions: [],
+  },
   community: {
     key: "community",
     name: "👤 Community",
     color: 0x95a5a6,
     permissions: [],
   },
-  pro: {
-    key: "pro",
-    name: "💎 Pro",
+  proCustomer: {
+    key: "proCustomer",
+    name: "💎 Pro Kunde",
     color: 0x9b59b6,
     permissions: [],
   },
-  beta: {
-    key: "beta",
-    name: "🧪 Beta",
+  betaTester: {
+    key: "betaTester",
+    name: "🧪 Beta Tester",
     color: 0x3498db,
     permissions: [],
   },
@@ -46,7 +58,9 @@ export const setupRoleDefinitions = [
   { name: "👑 Founder", color: 0xf5c542, permissions: [PermissionFlagsBits.Administrator] },
   { name: "🛠️ Developer", color: 0x5865f2, permissions: [PermissionFlagsBits.ManageGuild] },
   { name: "🤝 Moderator", color: 0x57f287, permissions: [PermissionFlagsBits.ManageMessages] },
-  managedRoles.pro,
+  managedRoles.proCustomer,
+  managedRoles.betaTester,
+  managedRoles.rulesAccepted,
   managedRoles.community,
 ] as const;
 

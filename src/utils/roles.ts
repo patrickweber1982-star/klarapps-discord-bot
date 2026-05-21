@@ -26,3 +26,7 @@ export async function ensureManagedRole(
 export async function ensureCommunityRole(guild: Guild) {
   return ensureManagedRole(guild, managedRoles.community);
 }
+
+export async function ensureRulesAcceptedRole(guild: Guild) {
+  return ensureManagedRole(guild, managedRoles.rulesAccepted);
+}
