@@ -1,37 +1,25 @@
-import { Client, Events, GatewayIntentBits } from "discord.js";
-import "dotenv/config";
-import { klarbotCommand } from "./commands/klarbot.js";
+import { Client, GatewayIntentBits } from "discord.js";
 
-const token = process.env.DISCORD_BOT_TOKEN;
+import { createCommandMap } from "./commands/index.js";
+import { loadConfig } from "./config/env.js";
+import { registerEvents } from "./events/index.js";
+import { registerGlobalErrorHandlers } from "./utils/errors.js";
+import { logger } from "./utils/logger.js";
 
-if (!token) {
-  throw new Error("DISCORD_BOT_TOKEN fehlt. Lege eine .env-Datei im Bot-Projekt an.");
-}
+registerGlobalErrorHandlers();
 
-const commands = new Map([[klarbotCommand.data.name, klarbotCommand]]);
+const config = loadConfig();
+const commands = createCommandMap();
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
 
-client.once(Events.ClientReady, (readyClient) => {
-  console.log(`KlarBot ist online als ${readyClient.user.tag}.`);
+registerEvents({ client, commands, config });
+
+logger.info(`KlarBot startet. Geladene Commands: ${Array.from(commands.keys()).join(", ")}`);
+
+client.login(config.discordBotToken).catch((error) => {
+  logger.error("KlarBot konnte nicht gestartet werden", error);
+  process.exitCode = 1;
 });
-
-client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isChatInputCommand()) {
-    return;
-  }
-
-  const command = commands.get(interaction.commandName);
-
-  if (!command) {
-    await interaction.reply({ content: "Unbekannter Command.", ephemeral: true });
-    return;
-  }
-
-  const response = await command.execute();
-  await interaction.reply({ content: response, ephemeral: true });
-});
-
-void client.login(token);

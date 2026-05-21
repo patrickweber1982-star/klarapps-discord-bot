@@ -1,10 +1,17 @@
 import { SlashCommandBuilder } from "discord.js";
+import type { BotCommand } from "../types/command.js";
 
-export const klarbotCommand = {
+export const klarbotCommandName = "klarbot" as const;
+
+export const klarbotCommand: BotCommand = {
+  name: klarbotCommandName,
   data: new SlashCommandBuilder()
-    .setName("klarbot")
+    .setName(klarbotCommandName)
     .setDescription("Prueft den Status von KlarBot."),
-  async execute() {
-    return "KlarBot ist online. KlarApps Systeme bereit.";
+  async execute({ interaction }) {
+    await interaction.reply({
+      content: "KlarBot ist online. KlarApps Systeme bereit.",
+      ephemeral: true,
+    });
   },
 };
