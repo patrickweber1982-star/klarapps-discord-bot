@@ -1,7 +1,13 @@
 import type { ButtonInteraction } from "discord.js";
 
 import { onboardingButtonIds } from "../config/onboarding.js";
-import { ensureCommunityRole, ensureRulesAcceptedRole } from "../utils/roles.js";
+import {
+  acceptRulesForMember,
+  buildOnboardingFailureEmbed,
+  unlockCommunityForMember,
+} from "../features/welcome/onboardingFlow.js";
+import { buildAlreadyVerifiedEmbed } from "../features/welcome/welcomeEmbeds.js";
+import { logOnboardingStepFailed } from "../features/welcome/welcomeLogger.js";
 
 export async function handleOnboardingButton(interaction: ButtonInteraction) {
   if (interaction.customId === onboardingButtonIds.acceptRules) {
@@ -20,49 +26,51 @@ export async function handleOnboardingButton(interaction: ButtonInteraction) {
 async function acceptRules(interaction: ButtonInteraction) {
   if (!interaction.guild) {
     await interaction.reply({
-      content: "Diese Aktion ist nur auf einem Discord-Server moeglich.",
+      embeds: [buildOnboardingFailureEmbed()],
       ephemeral: true,
     });
     return;
   }
 
-  const role = await ensureRulesAcceptedRole(interaction.guild);
-  const member = await interaction.guild.members.fetch(interaction.user.id);
+  try {
+    const member = await interaction.guild.members.fetch(interaction.user.id);
+    const embed = await acceptRulesForMember(member);
 
-  if (!member.roles.cache.has(role.id)) {
-    await member.roles.add(role, "KlarBot Onboarding: Regeln akzeptiert");
+    await interaction.reply({
+      embeds: [embed],
+      ephemeral: true,
+    });
+  } catch (error) {
+    logOnboardingStepFailed("accept-rules", error);
+    await interaction.reply({
+      embeds: [buildOnboardingFailureEmbed()],
+      ephemeral: true,
+    });
   }
-
-  await interaction.reply({
-    content: "Regeln akzeptiert. Lies jetzt die KlarBot-Erklärung.",
-    ephemeral: true,
-  });
 }
 
 async function unlockCommunity(interaction: ButtonInteraction) {
   if (!interaction.guild) {
     await interaction.reply({
-      content: "Diese Aktion ist nur auf einem Discord-Server moeglich.",
+      embeds: [buildOnboardingFailureEmbed()],
       ephemeral: true,
     });
     return;
   }
 
-  const role = await ensureCommunityRole(interaction.guild);
-  const member = await interaction.guild.members.fetch(interaction.user.id);
+  try {
+    const member = await interaction.guild.members.fetch(interaction.user.id);
+    const result = await unlockCommunityForMember(member);
 
-  if (member.roles.cache.has(role.id)) {
     await interaction.reply({
-      content: "Du bist bereits in der Community freigeschaltet.",
+      embeds: [result.alreadyVerified ? buildAlreadyVerifiedEmbed() : result.embed ?? buildOnboardingFailureEmbed()],
       ephemeral: true,
     });
-    return;
+  } catch (error) {
+    logOnboardingStepFailed("unlock-community", error);
+    await interaction.reply({
+      embeds: [buildOnboardingFailureEmbed()],
+      ephemeral: true,
+    });
   }
-
-  await member.roles.add(role, "KlarBot Onboarding: Community freigeschaltet");
-
-  await interaction.reply({
-    content: "Willkommen in der Community.",
-    ephemeral: true,
-  });
 }

@@ -26,11 +26,13 @@ Benötigte Variablen:
 DISCORD_BOT_TOKEN=
 DISCORD_CLIENT_ID=
 DISCORD_GUILD_ID=
+DISCORD_ENABLE_GUILD_MEMBERS_INTENT=false
 ```
 
 - `DISCORD_BOT_TOKEN`: Bot-Token aus dem Discord Developer Portal.
 - `DISCORD_CLIENT_ID`: Application/Client-ID der Discord-App.
 - `DISCORD_GUILD_ID`: Server-ID des Discord-Testservers, auf dem Commands registriert werden.
+- `DISCORD_ENABLE_GUILD_MEMBERS_INTENT`: Optionaler Schalter fuer Join-Welcome. Nur auf `true` setzen, wenn das Guild Members Intent auch im Discord Developer Portal aktiviert ist.
 
 `.env` bleibt ignoriert und darf nicht committed werden.
 
@@ -90,7 +92,7 @@ src/
 
 - Modularer Command Handler mit zentraler Command-Map.
 - Event Handler fuer `ready` und `interactionCreate`, vorbereitet fuer weitere Events wie `guildMemberAdd`.
-- Logger mit `info`, `success`, `moderation`, `creator`, `roles`, `giveaway`, `warn`, `error` und `debug`.
+- Logger mit `info`, `success`, `moderation`, `creator`, `roles`, `giveaway`, `welcome`, `warn`, `error` und `debug`.
 - Config-System mit Validierung fuer `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID` und `DISCORD_GUILD_ID`.
 - Globales Error Handling fuer `unhandledRejection` und `uncaughtException`.
 - Interaction-Fehler werden sauber als KlarBot-Embed beantwortet, damit keine Discord-Fehlermeldung stehen bleibt.
@@ -113,6 +115,7 @@ Terminal-Logs folgen einem einheitlichen Format:
 [KlarBot] [CREATOR] Stream-Ankündigung erstellt
 [KlarBot] [ROLES] Rolle vergeben
 [KlarBot] [GIVEAWAY] Gewinner gezogen
+[KlarBot] [WELCOME] user joined
 [KlarBot] [ERROR] Permission fehlgeschlagen
 ```
 
@@ -167,6 +170,17 @@ Onboarding-Flow:
 4. Dort klicken sie `🚀 Community freischalten` und erhalten `👤 Community`.
 5. Danach sehen sie die normalen Community-, Support- und KlarApps-Bereiche.
 
+Welcome Polish V1:
+
+- neue Join-Welcome-Embeds mit User Mention und Servername.
+- kompakte Schritte fuer Regeln, Verify, Community, Rollen und Support.
+- Progress-Hinweise ohne Datenbank.
+- Verify- und Onboarding-Buttons antworten mit modernen Embeds.
+- Nach Freischaltung wird auf `/roles-panel` und Interessenrollen hingewiesen.
+- Logs laufen ueber `[KlarBot] [WELCOME]`.
+
+Der Join-Welcome nutzt das Discord `GuildMembers` Intent. Setze `DISCORD_ENABLE_GUILD_MEMBERS_INTENT=true` und aktiviere das Intent im Discord Developer Portal, damit `guildMemberAdd` ausgelöst wird. Ohne diesen Schalter startet KlarBot stabil weiter, postet aber keine automatischen Join-Welcome-Nachrichten.
+
 Permissions:
 
 - `@everyone` sieht am Anfang nur `📜・regeln`.
@@ -212,6 +226,14 @@ Das Panel kann in diesen Channels erstellt werden:
 Nutzer klicken auf `✅ Verifizieren` und erhalten die Rolle `👤 Community`. Wenn die Rolle noch nicht existiert, erstellt KlarBot sie automatisch. Bereits verifizierte Nutzer erhalten keine doppelte Rolle und bekommen eine freundliche Rueckmeldung.
 
 Die Rollenlogik ist modular vorbereitet, damit spaeter Pro-, Beta-, Kunden- und Lizenzrollen sauber ergaenzt werden koennen.
+
+Dateien fuer Welcome/Verify Polish:
+
+- `src/features/welcome/welcomeEmbeds.ts`
+- `src/features/welcome/onboardingFlow.ts`
+- `src/features/welcome/verifyFlow.ts`
+- `src/features/welcome/welcomeLogger.ts`
+- `src/events/guildMemberAdd.ts`
 
 ## Ticket-System V1
 

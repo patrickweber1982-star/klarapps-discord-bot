@@ -10,9 +10,18 @@ registerGlobalErrorHandlers();
 
 const config = loadConfig();
 const commands = createCommandMap();
+const intents = [GatewayIntentBits.Guilds];
+
+if (process.env.DISCORD_ENABLE_GUILD_MEMBERS_INTENT === "true") {
+  intents.push(GatewayIntentBits.GuildMembers);
+} else {
+  logger.warn(
+    "GuildMembers Intent ist deaktiviert. Join-Welcome funktioniert erst mit DISCORD_ENABLE_GUILD_MEMBERS_INTENT=true und aktiviertem Intent im Discord Developer Portal.",
+  );
+}
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
+  intents,
 });
 
 registerEvents({ client, commands, config });

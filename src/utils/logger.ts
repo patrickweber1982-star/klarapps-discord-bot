@@ -5,6 +5,7 @@ type LogLevel =
   | "creator"
   | "roles"
   | "giveaway"
+  | "welcome"
   | "warn"
   | "error"
   | "debug";
@@ -16,6 +17,7 @@ const levelColors: Record<LogLevel, string> = {
   creator: "\x1b[95m",
   roles: "\x1b[34m",
   giveaway: "\x1b[33m",
+  welcome: "\x1b[36m",
   warn: "\x1b[33m",
   error: "\x1b[31m",
   debug: "\x1b[90m",
@@ -70,6 +72,10 @@ export const logger = {
 
   giveaway(message: string, meta?: unknown) {
     writeLog("giveaway", console.info, message, meta);
+  },
+
+  welcome(message: string, meta?: unknown) {
+    writeLog("welcome", console.info, message, meta);
   },
 
   warn(message: string, meta?: unknown) {

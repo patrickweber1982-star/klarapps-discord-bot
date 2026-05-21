@@ -23,13 +23,19 @@ import {
 } from "../config/channels.js";
 import { onboardingButtonIds } from "../config/onboarding.js";
 import {
+  buildKlarBotGuideEmbed,
+  buildRolesOverviewEmbed,
+  buildRulesEmbed,
+  buildWelcomeChannelEmbed,
+} from "../features/welcome/welcomeEmbeds.js";
+import {
   managedRoles,
   setupRoleDefinitions,
   ticketStaffRoleNames,
 } from "../config/roles.js";
 import type { BotCommand } from "../types/command.js";
 import { primaryButton } from "../utils/components.js";
-import { onboardingEmbed, rolesEmbed, successEmbed } from "../utils/embeds.js";
+import { successEmbed } from "../utils/embeds.js";
 import { logger as coreLogger } from "../utils/logger.js";
 import { hasAdministrator } from "../utils/permissions.js";
 
@@ -481,18 +487,7 @@ async function ensureRulesMessage(channel: TextChannel | undefined, result: Setu
     onboardingButtonIds.acceptRules,
     {
       embeds: [
-        onboardingEmbed(
-          [
-            "Bitte bestätige die Regeln, bevor du Zugriff auf weitere Bereiche erhältst.",
-            "",
-            "• Sei respektvoll.",
-            "• Kein Spam.",
-            "• Keine Werbung ohne Erlaubnis.",
-            "• Keine beleidigenden Inhalte.",
-            "• Support-Anfragen bitte über Tickets.",
-          ].join("\n"),
-          "📜 Serverregeln",
-        ),
+        buildRulesEmbed(),
       ],
       components: [
         new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -515,17 +510,7 @@ async function ensureKlarBotGuideMessage(channel: TextChannel | undefined, resul
     onboardingButtonIds.unlockCommunity,
     {
       embeds: [
-        onboardingEmbed(
-          [
-            "KlarBot verbindet Serverstruktur, Support und Rollen in einem klaren System.",
-            "",
-            "• `/help` zeigt dir die Übersicht.",
-            "• `/tickets` öffnet den Support.",
-            "• `/verify` schaltet die Community frei.",
-            "• Weitere KlarApps-Funktionen werden modular ergänzt.",
-          ].join("\n"),
-          "🤖 So funktioniert KlarBot",
-        ),
+        buildKlarBotGuideEmbed(),
       ],
       components: [
         new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -548,14 +533,7 @@ async function ensureWelcomeMessage(channel: TextChannel | undefined, result: Se
     "klarbot-welcome",
     {
       embeds: [
-        onboardingEmbed(
-          [
-            "Willkommen bei KlarApps. Schön, dass du da bist.",
-            "",
-            "Nutze `/help`, um KlarBot kennenzulernen. Für Support und Feedback stehen dir Tickets und Community-Channels zur Verfügung.",
-          ].join("\n"),
-          "👋 Willkommen",
-        ),
+        buildWelcomeChannelEmbed(channel.guild.name),
       ],
     },
     result,
@@ -573,24 +551,7 @@ async function ensureRolesOverviewMessage(channel: TextChannel | undefined, resu
     "klarbot-roles-overview",
     {
       embeds: [
-        rolesEmbed(
-          [
-            "Hier siehst du die wichtigsten Rollen auf diesem Server.",
-            "",
-            "**Team**",
-            "👑 Founder - Serverleitung und finale Entscheidungen.",
-            "🛠️ Developer - Entwicklung, Technik und KlarBot-Systeme.",
-            "🤝 Moderator - Community-Schutz, Support und Ordnung.",
-            "",
-            "**Community und Kunden**",
-            "💎 Pro Kunde - Zugriff auf Pro-Bereiche und Kundeninformationen.",
-            "🧪 Beta Tester - frühe Tests, Feedback und Beta-Bereiche.",
-            "👤 Community - normaler Zugriff auf Community, Support und KlarApps-Bereiche.",
-            "",
-            "Rollenbuttons werden später separat über `/roles` genutzt.",
-          ].join("\n"),
-          "🎭 Rollen",
-        ),
+        buildRolesOverviewEmbed(),
       ],
     },
     result,

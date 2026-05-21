@@ -1,9 +1,9 @@
 import { ActionRowBuilder, ChannelType, PermissionFlagsBits, SlashCommandBuilder, type ButtonBuilder } from "discord.js";
 
 import { verifyPanelChannelNames } from "../config/channels.js";
+import { buildVerifyPanelEmbed } from "../features/welcome/welcomeEmbeds.js";
 import type { BotCommand } from "../types/command.js";
 import { primaryButton } from "../utils/components.js";
-import { infoEmbed } from "../utils/embeds.js";
 import { hasAdministrator, hasManageGuild, manageGuildPermissionMessage } from "../utils/permissions.js";
 import { verifyButtonId } from "../interactions/verifyButton.js";
 
@@ -42,16 +42,11 @@ export const verifyCommand: BotCommand = {
     }
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      primaryButton(verifyButtonId, "✅ Verifizieren"),
+      primaryButton(verifyButtonId, "✅ Community freischalten"),
     );
 
     await interaction.reply({
-      embeds: [
-        infoEmbed(
-          "Klicke auf den Button, um Zugriff auf die Community zu erhalten.",
-          "Willkommen bei KlarApps",
-        ),
-      ],
+      embeds: [buildVerifyPanelEmbed(interaction.guild)],
       components: [row],
     });
   },
