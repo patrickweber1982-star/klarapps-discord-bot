@@ -6,6 +6,8 @@ const klarAppsBrand = {
     success: 0x21a67a,
     error: 0xd64545,
     info: 0x2563eb,
+    warning: 0xf59e0b,
+    moderation: 0x7c3aed,
   },
 };
 
@@ -28,4 +30,12 @@ export function errorEmbed(description: string, title = "Fehler") {
 
 export function infoEmbed(description: string, title = klarAppsBrand.name) {
   return baseEmbed(title, description, klarAppsBrand.colors.info);
+}
+
+export function warningEmbed(description: string, title = "Hinweis") {
+  return baseEmbed(title, description, klarAppsBrand.colors.warning);
+}
+
+export function moderationEmbed(description: string, title = "Moderation") {
+  return baseEmbed(title, description, klarAppsBrand.colors.moderation);
 }

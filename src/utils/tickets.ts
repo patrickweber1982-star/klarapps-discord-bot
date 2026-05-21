@@ -40,7 +40,7 @@ export async function ensureSupportCategory(guild: Guild) {
     return existingCategory;
   }
 
-  return guild.channels.create({
+  const category = await guild.channels.create({
     name: supportCategoryName,
     type: ChannelType.GuildCategory,
     permissionOverwrites: [
@@ -51,6 +51,9 @@ export async function ensureSupportCategory(guild: Guild) {
     ],
     reason: "KlarBot Tickets: Support-Kategorie erstellen",
   });
+
+  await category.setPosition(2).catch(() => undefined);
+  return category;
 }
 
 export async function createTicketChannel(
@@ -61,7 +64,7 @@ export async function createTicketChannel(
   const category = await ensureSupportCategory(guild);
   await guild.roles.fetch();
 
-  const channelName = buildTicketChannelName(member.user);
+  const channelName = buildTicketChannelName(definition.type, member.user);
 
   return guild.channels.create({
     name: channelName,
@@ -73,7 +76,7 @@ export async function createTicketChannel(
   });
 }
 
-export function buildTicketChannelName(user: User) {
+export function buildTicketChannelName(type: TicketType, user: User) {
   const normalizedName = user.username
     .normalize("NFKD")
     .toLowerCase()
@@ -81,7 +84,7 @@ export function buildTicketChannelName(user: User) {
     .replace(/^-+|-+$/g, "")
     .slice(0, 40);
 
-  return `ticket-${normalizedName || user.id}`;
+  return `${type}-${normalizedName || user.id}`;
 }
 
 function buildTicketPermissionOverwrites(guild: Guild, member: GuildMember) {

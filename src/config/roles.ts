@@ -51,3 +51,5 @@ export const setupRoleDefinitions = [
 ] as const;
 
 export const ticketStaffRoleNames = ["👑 Founder", "🛠️ Developer", "🤝 Moderator"] as const;
+
+export const moderationRoleNames = ticketStaffRoleNames;

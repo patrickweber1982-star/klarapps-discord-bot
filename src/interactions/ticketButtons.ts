@@ -1,15 +1,24 @@
 import { ActionRowBuilder, type ButtonBuilder, type ButtonInteraction, ChannelType } from "discord.js";
 
 import { ticketButtonIds, ticketTypes, type TicketType } from "../config/tickets.js";
-import { dangerButton } from "../utils/components.js";
-import { infoEmbed } from "../utils/embeds.js";
+import { dangerButton, secondaryButton } from "../utils/components.js";
+import { infoEmbed, successEmbed } from "../utils/embeds.js";
 import {
   canManageTicket,
   createTicketChannel,
   findOpenTicketChannel,
 } from "../utils/tickets.js";
+import { logger } from "../utils/logger.js";
 
 export async function handleTicketButton(interaction: ButtonInteraction) {
+  if (interaction.customId === ticketButtonIds.claim) {
+    await interaction.reply({
+      content: "Feature folgt bald.",
+      ephemeral: true,
+    });
+    return true;
+  }
+
   if (interaction.customId === ticketButtonIds.close) {
     await closeTicket(interaction);
     return true;
@@ -44,15 +53,17 @@ async function openTicket(interaction: ButtonInteraction, ticketType: TicketType
 
   if (existingTicket) {
     await interaction.editReply({
-      content: `Du hast bereits ein offenes Ticket: ${existingTicket}.`,
+      content: `Du hast bereits ein offenes ${definition.label}-Ticket: ${existingTicket}. Bitte nutze zuerst dieses Ticket weiter.`,
     });
     return;
   }
 
   const ticketChannel = await createTicketChannel(interaction.guild, member, definition);
+  logger.info(`Ticket erstellt: ${ticketChannel.name} (${definition.type}) fuer ${interaction.user.tag}`);
 
   const closeRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    dangerButton(ticketButtonIds.close, "🔒 Ticket schließen"),
+    secondaryButton(ticketButtonIds.claim, "📌 Claim"),
+    dangerButton(ticketButtonIds.close, "🔒 Schließen"),
   );
 
   await ticketChannel.send({
@@ -63,8 +74,10 @@ async function openTicket(interaction: ButtonInteraction, ticketType: TicketType
           `**Nutzer:** ${interaction.user}`,
           "",
           definition.description,
+          "",
+          "Bitte bleibe respektvoll und beschreibe dein Anliegen so klar wie moeglich.",
         ].join("\n"),
-        "KlarBot Ticket",
+        `🎫 ${definition.label}`,
       ),
     ],
     components: [closeRow],
@@ -96,7 +109,11 @@ async function closeTicket(interaction: ButtonInteraction) {
     return;
   }
 
-  await interaction.reply("Ticket wird geschlossen...");
+  await interaction.reply({
+    embeds: [successEmbed("Ticket wird geschlossen...")],
+  });
+
+  logger.info(`Ticket geschlossen: ${interaction.channel.name} von ${interaction.user.tag}`);
   await wait(5000);
   await interaction.channel.delete("KlarBot Ticket geschlossen");
 }

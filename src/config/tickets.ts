@@ -11,6 +11,7 @@ export const ticketButtonIds = {
   support: "ticket:create:support",
   bug: "ticket:create:bug",
   feature: "ticket:create:feature",
+  claim: "ticket:claim",
   close: "ticket:close",
 } as const;
 

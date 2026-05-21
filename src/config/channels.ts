@@ -1,6 +1,8 @@
 export const verifyPanelChannelNames = ["👋・willkommen", "📜・regeln"] as const;
 
 export const supportCategoryName = "🛠️ SUPPORT";
+export const moderationCategoryName = "👮 MODERATION";
+export const moderationLogChannelName = "📋・mod-logs";
 
 export const setupCategoryDefinitions = [
   {

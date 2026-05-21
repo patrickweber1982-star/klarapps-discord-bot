@@ -35,12 +35,21 @@ export const ticketsCommand: BotCommand = {
       secondaryButton(ticketButtonIds.feature, ticketTypes.feature.buttonLabel),
     );
 
+    const embed = infoEmbed(
+      [
+        "Wähle eine Kategorie und öffne ein Support-Ticket.",
+        "",
+        "**Kategorien**",
+        "🛠️ Support - Hilfe zu KlarApps und Nutzung.",
+        "🐞 Bug Report - Fehler sauber melden.",
+        "💡 Feature-Wunsch - Ideen fuer kommende Versionen.",
+      ].join("\n"),
+      "🎫 KlarBot Support",
+    );
+
     await interaction.reply({
       embeds: [
-        infoEmbed(
-          "Wähle eine Kategorie und öffne ein Support-Ticket.",
-          "🎫 KlarBot Support",
-        ),
+        embed,
       ],
       components: [row],
     });

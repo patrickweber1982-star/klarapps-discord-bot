@@ -50,6 +50,9 @@ Aktuell werden diese Commands registriert:
 /help -> Zeigt die KlarBot Hilfe und verfuegbaren Funktionen.
 /verify -> Erstellt ein Verify-Panel fuer neue Mitglieder.
 /tickets -> Erstellt ein Ticket-Panel fuer Support, Bugs und Feature-Wuensche.
+/clear -> Loescht Nachrichten.
+/timeout -> Setzt einen Nutzer in Timeout.
+/kick -> Kickt einen Nutzer.
 ```
 
 ## Entwicklung
@@ -139,7 +142,13 @@ Das Panel bietet drei Tickettypen:
 - `🐞 Bug Report`
 - `💡 Feature-Wunsch`
 
-Beim Klick erstellt KlarBot einen privaten Channel `ticket-username` in der Kategorie `🛠️ SUPPORT`. Wenn die Kategorie fehlt, wird sie automatisch erstellt.
+Beim Klick erstellt KlarBot einen privaten Channel in der Kategorie `🛠️ SUPPORT`. Wenn die Kategorie fehlt, wird sie automatisch erstellt und nach Moeglichkeit einsortiert.
+
+Channel-Namen richten sich nach dem Tickettyp:
+
+- `support-username`
+- `bug-username`
+- `feature-username`
 
 Ticket-Channel sind sichtbar fuer:
 
@@ -150,7 +159,28 @@ Ticket-Channel sind sichtbar fuer:
 
 Normale Community-Mitglieder sehen fremde Tickets nicht. Ein Nutzer kann nicht mehrere offene Tickets des gleichen Typs gleichzeitig erstellen. Tickets koennen ueber `🔒 Ticket schließen` geschlossen werden; KlarBot wartet 5 Sekunden und loescht danach den Channel.
 
+Ticket-Nachrichten enthalten Tickettyp, Nutzer, kurze Hinweise und eine Erinnerung an respektvollen Umgang. Der Button `📌 Claim` ist vorbereitet und antwortet aktuell mit `Feature folgt bald.`.
+
 Das Ticket-System V1 nutzt keine Datenbank, kein Webpanel, keine AI und keine Analytics.
+
+## Moderation BASIC
+
+KlarBot enthaelt erste stabile Moderationscommands:
+
+- `/clear amount:1-100` loescht Nachrichten im aktuellen Channel.
+- `/timeout user minutes reason?` setzt einen Nutzer in Timeout.
+- `/kick user reason?` kickt einen Nutzer vom Server.
+
+Moderationscommands duerfen genutzt werden von:
+
+- `👑 Founder`
+- `🛠️ Developer`
+- `🤝 Moderator`
+- Administratoren
+
+KlarBot prueft bei `/timeout` und `/kick`, ob der Server-Owner betroffen ist, ob die Rollen-Hierarchie passt und ob der Bot die Aktion ausfuehren darf. Fehler werden freundlich als Embed beantwortet.
+
+Mod-Logs sind vorbereitet: Wenn ein Channel `📋・mod-logs` vorhanden ist, schreibt KlarBot Moderationsaktionen dort als Embed. Wenn der Channel fehlt, wird nur im Terminal geloggt.
 
 ## Geplante Features
 
