@@ -2,6 +2,7 @@ export const rulesChannelName = "📜・regeln";
 export const klarBotGuideChannelName = "🤖・so-funktioniert-klarbot";
 export const welcomeChannelName = "👋・willkommen";
 export const supportHintChannelName = "🎫・support";
+export const ticketLogChannelName = "📋・ticket-logs";
 export const rolesOverviewChannelName = "🎭・rollen";
 
 export const verifyPanelChannelNames = [welcomeChannelName, rulesChannelName] as const;
@@ -42,6 +43,7 @@ export const setupCategoryDefinitions = [
       { name: supportHintChannelName, access: "community" },
       { name: "🐞・bug-reports", access: "community" },
       { name: "💡・feature-wünsche", access: "community" },
+      { name: ticketLogChannelName, access: "ticketLogs" },
     ],
   },
   {

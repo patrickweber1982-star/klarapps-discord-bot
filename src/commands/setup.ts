@@ -63,6 +63,7 @@ type SetupRoles = {
   proCustomer: Role;
   betaTester: Role;
   teamRoles: Role[];
+  supportRoles: Role[];
 };
 
 export const setupCommand: BotCommand = {
@@ -265,6 +266,7 @@ async function ensureRoles(guild: Guild, result: SetupResult): Promise<SetupRole
     proCustomer: findRoleOrThrow(guild, managedRoles.proCustomer.name),
     betaTester: findRoleOrThrow(guild, managedRoles.betaTester.name),
     teamRoles: ticketStaffRoleNames.map((roleName) => findRoleOrThrow(guild, roleName)),
+    supportRoles: findOptionalRoles(guild, ["🤝 Supporter"]),
   };
 }
 
@@ -564,6 +566,19 @@ function buildOverwrites(
     return [hiddenForEveryone, ...teamAllow];
   }
 
+  if (access === "ticketLogs") {
+    const supportAllow: OverwriteResolvable[] = roles.supportRoles.map((role) => ({
+      id: role.id,
+      allow: [
+        PermissionsBitField.Flags.ViewChannel,
+        PermissionsBitField.Flags.ReadMessageHistory,
+      ],
+      deny: [PermissionsBitField.Flags.SendMessages],
+    }));
+
+    return [hiddenForEveryone, ...teamAllow, ...supportAllow];
+  }
+
   if (access === "voice") {
     return [hiddenForEveryone, voiceAccess(roles.community), ...teamVoiceAllow];
   }
@@ -720,4 +735,10 @@ function findRoleOrThrow(guild: Guild, roleName: string) {
   }
 
   return role;
+}
+
+function findOptionalRoles(guild: Guild, roleNames: string[]) {
+  return roleNames
+    .map((roleName) => guild.roles.cache.find((currentRole) => currentRole.name === roleName))
+    .filter((role): role is Role => Boolean(role));
 }

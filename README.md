@@ -92,7 +92,7 @@ src/
 
 - Modularer Command Handler mit zentraler Command-Map.
 - Event Handler fuer `ready` und `interactionCreate`, vorbereitet fuer weitere Events wie `guildMemberAdd`.
-- Logger mit `info`, `success`, `moderation`, `creator`, `roles`, `giveaway`, `welcome`, `template`, `warn`, `error` und `debug`.
+- Logger mit `info`, `success`, `moderation`, `creator`, `roles`, `giveaway`, `welcome`, `template`, `ticketLog`, `warn`, `error` und `debug`.
 - Config-System mit Validierung fuer `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID` und `DISCORD_GUILD_ID`.
 - Globales Error Handling fuer `unhandledRejection` und `uncaughtException`.
 - Interaction-Fehler werden sauber als KlarBot-Embed beantwortet, damit keine Discord-Fehlermeldung stehen bleibt.
@@ -117,6 +117,7 @@ Terminal-Logs folgen einem einheitlichen Format:
 [KlarBot] [GIVEAWAY] Gewinner gezogen
 [KlarBot] [WELCOME] user joined
 [KlarBot] [TEMPLATE] created channel
+[KlarBot] [TICKET_LOG] ticket created
 [KlarBot] [ERROR] Permission fehlgeschlagen
 ```
 
@@ -154,7 +155,7 @@ Erstellt werden:
 
 - `📢 INFO` mit Regeln, KlarBot-Erklaerung, Willkommen, Ankuendigungen, Roadmap und Rollenuebersicht.
 - `💬 COMMUNITY` mit Allgemein, Ideen/Feedback, Showcase und Community-Hilfe.
-- `🛠️ SUPPORT` mit Support, Bug Reports und Feature-Wuenschen.
+- `🛠️ SUPPORT` mit Support, Bug Reports, Feature-Wuenschen und Ticket-Logs.
 - `🤖 KLARAPPS` mit Produktbereichen.
 - `🔒 KUNDENBEREICH` mit Downloads, Pro Features und Beta Tests.
 - `🔊 VOICE` mit Allgemein, Support Talk und Community Talk.
@@ -190,6 +191,7 @@ Permissions:
 - Kundenbereiche sind fuer `💎 Pro Kunde`, `🧪 Beta Tester` und Teamrollen sichtbar.
 - Voice-Bereiche sind fuer `👤 Community` und Teamrollen sichtbar und betretbar.
 - Moderationsbereiche sind nur fuer Teamrollen sichtbar.
+- `📋・ticket-logs` ist fuer Founder, Developer, Moderator und optional vorhandene Supporter sichtbar, aber nicht fuer normale Community-Mitglieder.
 - Info-Channels sind fuer Community lesbar, aber nur Teamrollen duerfen schreiben.
 - Teamrollen sind `👑 Founder`, `🛠️ Developer` und `🤝 Moderator`.
 
@@ -300,6 +302,22 @@ Ticket-Channel sind sichtbar fuer:
 Normale Community-Mitglieder sehen fremde Tickets nicht. Ein Nutzer kann nicht mehrere offene Tickets des gleichen Typs gleichzeitig erstellen. Tickets koennen ueber `🔒 Ticket schließen` geschlossen werden; KlarBot wartet 5 Sekunden und loescht danach den Channel.
 
 Ticket-Nachrichten enthalten Tickettyp, Nutzer, kurze Hinweise und eine Erinnerung an respektvollen Umgang. Der Button `📌 Claim` ist vorbereitet und antwortet aktuell mit `Feature folgt bald.`.
+
+Ticket Logs V1:
+
+- `/setup` erstellt `📋・ticket-logs` unter `🛠️ SUPPORT`.
+- Ticket-Erstellung wird als Log-Embed gepostet.
+- Ticket-Schließung wird als Log-Embed gepostet.
+- Ticket-Fehler werden als Warn-Embed gepostet, falls der Log-Channel erreichbar ist.
+- Wenn der Log-Channel fehlt oder Bot-Rechte fehlen, crasht KlarBot nicht und loggt eine Warnung im Terminal.
+- Es werden nur Metadaten geloggt: User, Channel, Zeit, Guild, Aktion und Tickettyp bzw. Grund.
+- Es gibt noch keinen Transcript Export, keine Ticket-History und keine Datenbank.
+
+Ticket-Log-Dateien:
+
+- `src/features/tickets/ticketLogService.ts`
+- `src/features/tickets/ticketLogEmbeds.ts`
+- `src/features/tickets/ticketLogger.ts`
 
 Das Ticket-System V1 nutzt keine Datenbank, kein Webpanel, keine AI und keine Analytics.
 
