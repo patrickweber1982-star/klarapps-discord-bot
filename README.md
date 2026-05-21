@@ -1,32 +1,19 @@
 # KlarApps Discord Bot
 
-Erste Grundstruktur fuer den KlarApps Discord-Bot. Der Bot enthaelt aktuell nur einen Test-Command und keine Logik fuer echte Kundendaten, Zahlungen, Rollen oder Lizenzen.
+KlarBot ist der Discord-Bot fuer KlarApps. Diese Grundstruktur enthaelt aktuell nur den ersten Slash Command und noch keine Logik fuer echte Kundendaten, Zahlungen, Rollen oder Lizenzen.
 
-## Start
+## Einrichtung
 
-1. Abhaengigkeiten installieren:
+Abhaengigkeiten installieren:
 
 ```bash
-cd discord-bot
 npm install
 ```
 
-2. Lokale Env-Datei anlegen:
+Lokale Env-Datei anlegen:
 
 ```bash
 cp .env.example .env
-```
-
-3. Discord Slash-Commands fuer den Test-Server registrieren:
-
-```bash
-npm run register:commands
-```
-
-4. Bot starten:
-
-```bash
-npm run dev
 ```
 
 ## Environment Variables
@@ -41,10 +28,24 @@ DISCORD_GUILD_ID=
 - `DISCORD_CLIENT_ID`: Application/Client-ID der Discord-App.
 - `DISCORD_GUILD_ID`: Server-ID des Discord-Testservers, auf dem Commands registriert werden.
 
-## Aktueller Test-Command
+## Command-Registrierung
+
+Slash Commands werden fuer den in `DISCORD_GUILD_ID` gesetzten Server registriert:
+
+```bash
+npm run register
+```
+
+Aktuell wird nur dieser Command registriert:
 
 ```txt
-/ping -> KlarApps Bot online
+/klarbot -> KlarBot ist online. KlarApps Systeme bereit.
+```
+
+## Bot starten
+
+```bash
+npm run dev
 ```
 
 ## Geplante Features
@@ -59,4 +60,5 @@ DISCORD_GUILD_ID=
 
 - Keine echten Kundendaten oder Zahlungsdaten in den Bot-Code schreiben.
 - Secrets nur ueber `.env` oder Server-Environment setzen.
+- `.env` darf nicht committed werden.
 - Rollen-, Lizenz- und Ticketlogik wird spaeter separat und kontrolliert ergaenzt.

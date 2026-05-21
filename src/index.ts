@@ -1,21 +1,21 @@
 import { Client, Events, GatewayIntentBits } from "discord.js";
 import "dotenv/config";
-import { pingCommand } from "./commands/ping.js";
+import { klarbotCommand } from "./commands/klarbot.js";
 
 const token = process.env.DISCORD_BOT_TOKEN;
 
 if (!token) {
-  throw new Error("DISCORD_BOT_TOKEN fehlt. Lege eine .env-Datei im discord-bot-Ordner an.");
+  throw new Error("DISCORD_BOT_TOKEN fehlt. Lege eine .env-Datei im Bot-Projekt an.");
 }
 
-const commands = new Map([[pingCommand.data.name, pingCommand]]);
+const commands = new Map([[klarbotCommand.data.name, klarbotCommand]]);
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
 
 client.once(Events.ClientReady, (readyClient) => {
-  console.log(`KlarApps Discord Bot ist online als ${readyClient.user.tag}.`);
+  console.log(`KlarBot ist online als ${readyClient.user.tag}.`);
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {

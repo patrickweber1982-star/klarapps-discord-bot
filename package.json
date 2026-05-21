@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",
+    "register": "tsx src/register-commands.ts",
     "register:commands": "tsx src/register-commands.ts",
     "typecheck": "tsc --noEmit"
   },
