@@ -53,23 +53,25 @@ export async function prepareDashboardSyncForGuild(
 ): Promise<GuildSyncSnapshot | null> {
   const client = createDashboardSyncClient(config);
 
-  if (!client.enabled) {
-    logger.debug(
-      `Dashboard-Sync fuer Guild ${guild.id} uebersprungen: nicht aktiviert oder unvollstaendig konfiguriert.`,
-    );
-    return null;
+  if (client.installationReportingEnabled) {
+    const installationReport = await client.reportGuildInstallation({
+      guildId: guild.id,
+      guildName: guild.name,
+      installed: true,
+    });
+
+    if (!installationReport.ok) {
+      logger.warn(
+        `Dashboard-Sync konnte Bot-Installationsstatus fuer Guild ${guild.id} nicht melden: ${installationReport.message}`,
+      );
+    }
   }
 
-  const installationReport = await client.reportGuildInstallation({
-    guildId: guild.id,
-    guildName: guild.name,
-    installed: true,
-  });
-
-  if (!installationReport.ok) {
-    logger.warn(
-      `Dashboard-Sync konnte Bot-Installationsstatus fuer Guild ${guild.id} nicht melden: ${installationReport.message}`,
+  if (!client.enabled) {
+    logger.debug(
+      `Dashboard-Sync fuer Guild ${guild.id} uebersprungen: Read-Sync nicht aktiviert oder unvollstaendig konfiguriert.`,
     );
+    return null;
   }
 
   const result = await client.readGuildConfig(guild.id);
@@ -120,9 +122,9 @@ export async function reportDashboardInstallationStatus(
 ) {
   const client = createDashboardSyncClient(config);
 
-  if (!client.enabled) {
+  if (!client.installationReportingEnabled) {
     logger.debug(
-      `Dashboard-Sync Installationsstatus fuer Guild ${guild.id} uebersprungen: nicht aktiviert oder unvollstaendig konfiguriert.`,
+      `Dashboard-Sync Installationsstatus fuer Guild ${guild.id} uebersprungen: API-URL oder API-Secret fehlt.`,
     );
     return;
   }

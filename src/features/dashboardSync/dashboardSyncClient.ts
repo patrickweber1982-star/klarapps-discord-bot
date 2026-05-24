@@ -9,6 +9,7 @@ import type {
 
 export type DashboardSyncClient = {
   enabled: boolean;
+  installationReportingEnabled: boolean;
   readHealth(): Promise<DashboardInternalReadResult<DashboardSyncHealthPayload>>;
   readGuildConfig(guildId: string): Promise<DashboardSyncReadResult>;
   readGuildTrial(
@@ -156,11 +157,10 @@ function disabledResult(message: string): DashboardInternalReadFailure {
 
 export function createDashboardSyncClient(config: BotConfig): DashboardSyncClient {
   const { dashboardSync } = config;
-  const enabled = Boolean(
-    dashboardSync.enabled &&
-      dashboardSync.apiBaseUrl &&
-      dashboardSync.syncToken,
+  const hasApiConnection = Boolean(
+    dashboardSync.apiBaseUrl && dashboardSync.syncToken,
   );
+  const enabled = Boolean(dashboardSync.enabled && hasApiConnection);
 
   async function readInternal<TPayload>(
     path: string,
@@ -240,13 +240,9 @@ export function createDashboardSyncClient(config: BotConfig): DashboardSyncClien
     guard: (value: unknown) => value is TPayload,
     fallbackMessage: string,
   ): Promise<DashboardInternalReadResult<TPayload>> {
-    if (!dashboardSync.enabled) {
-      return disabledResult("Dashboard-Sync ist deaktiviert.");
-    }
-
     if (!dashboardSync.apiBaseUrl || !dashboardSync.syncToken) {
       return disabledResult(
-        "Dashboard-Sync ist konfiguriert, aber API-URL oder API-Secret fehlt.",
+        "Dashboard-API URL oder API-Secret fehlt.",
       );
     }
 
@@ -311,6 +307,7 @@ export function createDashboardSyncClient(config: BotConfig): DashboardSyncClien
 
   return {
     enabled,
+    installationReportingEnabled: hasApiConnection,
     async readHealth() {
       return readInternal(
         "/api/klarbot/internal/health",
