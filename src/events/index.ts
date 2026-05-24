@@ -2,6 +2,7 @@ import type { Client } from "discord.js";
 
 import type { BotConfig } from "../config/env.js";
 import type { BotCommand } from "../types/command.js";
+import { registerGuildLifecycleEvents } from "./guildLifecycle.js";
 import { registerGuildMemberAddEvent } from "./guildMemberAdd.js";
 import { registerInteractionCreateEvent } from "./interactionCreate.js";
 import { registerReadyEvent } from "./ready.js";
@@ -20,4 +21,5 @@ export function registerEvents(options: RegisterEventsOptions) {
   });
   registerInteractionCreateEvent(options);
   registerGuildMemberAddEvent(options.client);
+  registerGuildLifecycleEvents(options.client, options.config);
 }

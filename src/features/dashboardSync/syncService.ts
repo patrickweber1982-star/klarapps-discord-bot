@@ -60,6 +60,18 @@ export async function prepareDashboardSyncForGuild(
     return null;
   }
 
+  const installationReport = await client.reportGuildInstallation({
+    guildId: guild.id,
+    guildName: guild.name,
+    installed: true,
+  });
+
+  if (!installationReport.ok) {
+    logger.warn(
+      `Dashboard-Sync konnte Bot-Installationsstatus fuer Guild ${guild.id} nicht melden: ${installationReport.message}`,
+    );
+  }
+
   const result = await client.readGuildConfig(guild.id);
 
   if (!result.ok) {
@@ -99,4 +111,36 @@ export async function prepareDashboardSyncForGuilds(
   }
 
   return snapshots;
+}
+
+export async function reportDashboardInstallationStatus(
+  guild: Guild,
+  config: BotConfig,
+  installed: boolean,
+) {
+  const client = createDashboardSyncClient(config);
+
+  if (!client.enabled) {
+    logger.debug(
+      `Dashboard-Sync Installationsstatus fuer Guild ${guild.id} uebersprungen: nicht aktiviert oder unvollstaendig konfiguriert.`,
+    );
+    return;
+  }
+
+  const result = await client.reportGuildInstallation({
+    guildId: guild.id,
+    guildName: guild.name,
+    installed,
+  });
+
+  if (!result.ok) {
+    logger.warn(
+      `Dashboard-Sync konnte Bot-Installationsstatus fuer Guild ${guild.id} nicht melden: ${result.message}`,
+    );
+    return;
+  }
+
+  logger.info(
+    `Dashboard-Sync Installationsstatus gemeldet | guild=${guild.name} | installed=${installed}`,
+  );
 }

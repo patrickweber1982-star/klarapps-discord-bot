@@ -17,6 +17,11 @@ export type DashboardSyncClient = {
   readGuildModules(
     guildId: string,
   ): Promise<DashboardInternalReadResult<DashboardModuleStateSyncPayload>>;
+  reportGuildInstallation(input: {
+    guildId: string;
+    guildName: string;
+    installed: boolean;
+  }): Promise<DashboardInternalReadResult<DashboardInstallationStatusPayload>>;
 };
 
 type DashboardInternalReadResult<TPayload> =
@@ -30,6 +35,18 @@ type DashboardInternalReadFailure = {
   ok: false;
   status: number | null;
   message: string;
+};
+
+type DashboardInstallationStatusPayload = {
+  ok: true;
+  mode: "klarbot_installation_status";
+  guildId: string;
+  installation: {
+    guildId: string;
+    guildName: string | null;
+    status: "installed" | "not_installed";
+    lastSeenAt: string | Date | null;
+  };
 };
 
 function normalizeBaseUrl(value: string) {
@@ -107,6 +124,25 @@ function isDashboardModuleStateSyncPayload(
     Array.isArray(payload.modules) &&
     payload.sync?.botCanWriteWebsiteState === false &&
     payload.botInstructions?.shouldApplyModuleChanges === false
+  );
+}
+
+function isDashboardInstallationStatusPayload(
+  value: unknown,
+): value is DashboardInstallationStatusPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Partial<DashboardInstallationStatusPayload>;
+
+  return (
+    payload.ok === true &&
+    payload.mode === "klarbot_installation_status" &&
+    typeof payload.guildId === "string" &&
+    Boolean(payload.installation) &&
+    (payload.installation?.status === "installed" ||
+      payload.installation?.status === "not_installed")
   );
 }
 
@@ -198,6 +234,81 @@ export function createDashboardSyncClient(config: BotConfig): DashboardSyncClien
     }
   }
 
+  async function postInternal<TPayload>(
+    path: string,
+    body: Record<string, unknown>,
+    guard: (value: unknown) => value is TPayload,
+    fallbackMessage: string,
+  ): Promise<DashboardInternalReadResult<TPayload>> {
+    if (!dashboardSync.enabled) {
+      return disabledResult("Dashboard-Sync ist deaktiviert.");
+    }
+
+    if (!dashboardSync.apiBaseUrl || !dashboardSync.syncToken) {
+      return disabledResult(
+        "Dashboard-Sync ist konfiguriert, aber API-URL oder API-Secret fehlt.",
+      );
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      dashboardSync.timeoutMs,
+    );
+    const endpoint = `${normalizeBaseUrl(dashboardSync.apiBaseUrl)}${path}`;
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${dashboardSync.syncToken}`,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      const data = (await response.json().catch(() => null)) as unknown;
+
+      if (!response.ok) {
+        return {
+          ok: false,
+          status: response.status,
+          message:
+            data && typeof data === "object" && "message" in data
+              ? String((data as { message?: unknown }).message)
+              : fallbackMessage,
+        };
+      }
+
+      if (!guard(data)) {
+        return {
+          ok: false,
+          status: response.status,
+          message:
+            "Dashboard-Sync Antwort passt nicht zum erwarteten Installationsstatus-Vertrag.",
+        };
+      }
+
+      return {
+        ok: true,
+        payload: data,
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        status: null,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unbekannter Dashboard-Sync Fehler.",
+      };
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   return {
     enabled,
     async readHealth() {
@@ -226,6 +337,17 @@ export function createDashboardSyncClient(config: BotConfig): DashboardSyncClien
         `/api/klarbot/internal/guild/${encodeURIComponent(guildId)}/modules`,
         isDashboardModuleStateSyncPayload,
         "Dashboard-Sync konnte den Modulstatus nicht laden.",
+      );
+    },
+    async reportGuildInstallation(input) {
+      return postInternal(
+        `/api/klarbot/internal/guild/${encodeURIComponent(input.guildId)}/installation`,
+        {
+          guildName: input.guildName,
+          installed: input.installed,
+        },
+        isDashboardInstallationStatusPayload,
+        "Dashboard-Sync konnte den Bot-Installationsstatus nicht melden.",
       );
     },
   };
