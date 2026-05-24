@@ -13,7 +13,11 @@ type RegisterEventsOptions = {
 };
 
 export function registerEvents(options: RegisterEventsOptions) {
-  registerReadyEvent({ client: options.client, commands: options.commands });
+  registerReadyEvent({
+    client: options.client,
+    commands: options.commands,
+    config: options.config,
+  });
   registerInteractionCreateEvent(options);
   registerGuildMemberAddEvent(options.client);
 }

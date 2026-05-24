@@ -1,11 +1,14 @@
 import { ActivityType, Events, type Client } from "discord.js";
 
+import type { BotConfig } from "../config/env.js";
+import { prepareDashboardSyncForGuilds } from "../features/dashboardSync/syncService.js";
 import type { BotCommand } from "../types/command.js";
 import { logger } from "../utils/logger.js";
 
 type RegisterReadyEventOptions = {
   client: Client;
   commands: Map<string, BotCommand>;
+  config: BotConfig;
 };
 
 const presenceMessages = [
@@ -16,7 +19,7 @@ const presenceMessages = [
 ] as const;
 
 export function registerReadyEvent(options: RegisterReadyEventOptions) {
-  const { client, commands } = options;
+  const { client, commands, config } = options;
 
   client.once(Events.ClientReady, (readyClient) => {
     let presenceIndex = 0;
@@ -39,5 +42,7 @@ export function registerReadyEvent(options: RegisterReadyEventOptions) {
     logger.info(`Botname: ${readyClient.user.tag}`);
     logger.info(`Aktive Commands: ${Array.from(commands.keys()).map((command) => `/${command}`).join(", ")}`);
     logger.info(`Server verbunden: ${readyClient.guilds.cache.size}`);
+
+    void prepareDashboardSyncForGuilds(readyClient.guilds.cache.values(), config);
   });
 }

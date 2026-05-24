@@ -27,12 +27,20 @@ DISCORD_BOT_TOKEN=
 DISCORD_CLIENT_ID=
 DISCORD_GUILD_ID=
 DISCORD_ENABLE_GUILD_MEMBERS_INTENT=false
+KLARBOT_DASHBOARD_SYNC_ENABLED=false
+KLARAPPS_API_BASE_URL=
+KLARBOT_SYNC_TOKEN=
+KLARBOT_SYNC_TIMEOUT_MS=5000
 ```
 
 - `DISCORD_BOT_TOKEN`: Bot-Token aus dem Discord Developer Portal.
 - `DISCORD_CLIENT_ID`: Application/Client-ID der Discord-App.
 - `DISCORD_GUILD_ID`: Server-ID des Discord-Testservers, auf dem Commands registriert werden.
 - `DISCORD_ENABLE_GUILD_MEMBERS_INTENT`: Optionaler Schalter fuer Join-Welcome. Nur auf `true` setzen, wenn das Guild Members Intent auch im Discord Developer Portal aktiviert ist.
+- `KLARBOT_DASHBOARD_SYNC_ENABLED`: Optionaler Schalter fuer die spaetere Read-Only Dashboard-Sync-Foundation.
+- `KLARAPPS_API_BASE_URL`: Basis-URL der KlarApps Website, z. B. `https://deine-domain.de`.
+- `KLARBOT_SYNC_TOKEN`: Server-to-server Token fuer den internen KlarBot Sync-Endpunkt. Niemals oeffentlich machen.
+- `KLARBOT_SYNC_TIMEOUT_MS`: Timeout fuer spaetere Config-Reads vom Dashboard.
 
 `.env` bleibt ignoriert und darf nicht committed werden.
 
@@ -555,6 +563,25 @@ Dateien:
 - Ticket-Erstellung und Ticket-Verwaltung.
 - Verbindung zu KlarApps-Pro-Lizenzen.
 - Sichere Anbindung an bestehende KlarApps-Systeme ohne direkte Speicherung sensibler Daten im Bot.
+
+## Phase 8.7 Dashboard Sync Foundation
+
+KlarBot ist vorbereitet, um spaeter zentrale Serverkonfiguration aus der KlarApps Website zu lesen. Die Anbindung ist bewusst modular und read-only:
+
+- `src/features/dashboardSync/dashboardSyncClient.ts` liest spaeter `/api/klarbot/sync/guild/[guildId]` mit `KLARBOT_SYNC_TOKEN`.
+- `src/features/dashboardSync/trialSync.ts` bewertet Trial-Zustaende wie aktiv, laeuft bald ab, abgelaufen, Cooldown aktiv und Removal Pending.
+- `src/features/dashboardSync/moduleSync.ts` mappt Dashboard-Module auf lokale Feature-Keys, ohne Live-Aktivierung auszufuehren.
+- `src/features/dashboardSync/syncService.ts` erstellt beim Bot-Start nur Snapshots und Logs.
+
+Noch nicht aktiv:
+
+- keine automatischen Modul-Aenderungen
+- keine Rollen- oder Channel-Bearbeitung aus Dashboard-Daten
+- kein Websocket-/Realtime-Sync
+- kein automatisches Verlassen von Servern
+- kein Bot-zu-Website Schreibzugriff
+
+Der Bot-Token bleibt ausschliesslich serverseitig. Der Dashboard-Sync nutzt einen separaten Server-to-server Token und darf niemals im Frontend oder in Logs ausgegeben werden.
 
 ## Hinweise
 
