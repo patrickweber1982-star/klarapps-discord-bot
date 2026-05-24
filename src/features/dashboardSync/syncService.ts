@@ -50,10 +50,16 @@ export function buildGuildSyncSnapshot(
 export async function prepareDashboardSyncForGuild(
   guild: Guild,
   config: BotConfig,
+  options: { reportInstallation?: boolean } = {},
 ): Promise<GuildSyncSnapshot | null> {
   const client = createDashboardSyncClient(config);
+  const reportInstallation = options.reportInstallation ?? true;
 
-  if (client.installationReportingEnabled) {
+  if (reportInstallation && client.installationReportingEnabled) {
+    logger.info(
+      `Dashboard-Sync meldet Guild-Installation | guild=${guild.name} | id=${guild.id}`,
+    );
+
     const installationReport = await client.reportGuildInstallation({
       guildId: guild.id,
       guildName: guild.name,
@@ -63,6 +69,10 @@ export async function prepareDashboardSyncForGuild(
     if (!installationReport.ok) {
       logger.warn(
         `Dashboard-Sync konnte Bot-Installationsstatus fuer Guild ${guild.id} nicht melden: ${installationReport.message}`,
+      );
+    } else {
+      logger.info(
+        `Dashboard-Sync Guild-Installation gemeldet | guild=${guild.name}`,
       );
     }
   }
@@ -96,10 +106,41 @@ export async function prepareDashboardSyncForGuilds(
   guilds: Iterable<Guild>,
   config: BotConfig,
 ) {
+  const guildList = Array.from(guilds);
   const snapshots: GuildSyncSnapshot[] = [];
+  const client = createDashboardSyncClient(config);
 
-  for (const guild of guilds) {
-    const snapshot = await prepareDashboardSyncForGuild(guild, config);
+  if (client.installationReportingEnabled) {
+    logger.info(
+      `Dashboard-Sync Startup-Snapshot meldet ${guildList.length} Guilds als installiert.`,
+    );
+
+    const result = await client.reportGuildInstallationSnapshot({
+      guilds: guildList.map((guild) => ({
+        guildId: guild.id,
+        guildName: guild.name,
+      })),
+    });
+
+    if (!result.ok) {
+      logger.warn(
+        `Dashboard-Sync Startup-Snapshot fehlgeschlagen: ${result.message}`,
+      );
+    } else {
+      logger.info(
+        `Dashboard-Sync Startup-Snapshot gespeichert | installiert=${result.payload.snapshot.installedGuildCount} | entfernt=${result.payload.snapshot.removedGuildCount}`,
+      );
+    }
+  } else {
+    logger.warn(
+      "Dashboard-Sync Startup-Snapshot uebersprungen: API-URL oder API-Secret fehlt.",
+    );
+  }
+
+  for (const guild of guildList) {
+    const snapshot = await prepareDashboardSyncForGuild(guild, config, {
+      reportInstallation: false,
+    });
 
     if (snapshot) {
       snapshots.push(snapshot);
@@ -143,6 +184,6 @@ export async function reportDashboardInstallationStatus(
   }
 
   logger.info(
-    `Dashboard-Sync Installationsstatus gemeldet | guild=${guild.name} | installed=${installed}`,
+    `Dashboard-Sync ${installed ? "Guild-Installation" : "Guild-Entfernung"} gemeldet | guild=${guild.name} | installed=${installed}`,
   );
 }

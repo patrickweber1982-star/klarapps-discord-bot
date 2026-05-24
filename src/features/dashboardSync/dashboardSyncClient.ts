@@ -26,6 +26,12 @@ export type DashboardSyncClient = {
     guildName: string;
     installed: boolean;
   }): Promise<DashboardInternalReadResult<DashboardInstallationStatusPayload>>;
+  reportGuildInstallationSnapshot(input: {
+    guilds: Array<{
+      guildId: string;
+      guildName: string;
+    }>;
+  }): Promise<DashboardInternalReadResult<DashboardInstallationSnapshotPayload>>;
 };
 
 type DashboardInternalReadResult<TPayload> =
@@ -50,6 +56,16 @@ type DashboardInstallationStatusPayload = {
     guildName: string | null;
     status: "installed" | "not_installed";
     lastSeenAt: string | Date | null;
+  };
+};
+
+type DashboardInstallationSnapshotPayload = {
+  ok: true;
+  mode: "klarbot_installation_snapshot";
+  snapshot: {
+    installedGuildCount: number;
+    removedGuildCount: number;
+    lastSyncedAt: string | Date | null;
   };
 };
 
@@ -147,6 +163,24 @@ function isDashboardInstallationStatusPayload(
     Boolean(payload.installation) &&
     (payload.installation?.status === "installed" ||
       payload.installation?.status === "not_installed")
+  );
+}
+
+function isDashboardInstallationSnapshotPayload(
+  value: unknown,
+): value is DashboardInstallationSnapshotPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Partial<DashboardInstallationSnapshotPayload>;
+
+  return (
+    payload.ok === true &&
+    payload.mode === "klarbot_installation_snapshot" &&
+    Boolean(payload.snapshot) &&
+    typeof payload.snapshot?.installedGuildCount === "number" &&
+    typeof payload.snapshot?.removedGuildCount === "number"
   );
 }
 
@@ -348,6 +382,19 @@ export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClie
         },
         isDashboardInstallationStatusPayload,
         "Dashboard-Sync konnte den Bot-Installationsstatus nicht melden.",
+      );
+    },
+    async reportGuildInstallationSnapshot(input) {
+      return postInternal(
+        "/api/klarbot/internal/installations/snapshot",
+        {
+          guilds: input.guilds.map((guild) => ({
+            id: guild.guildId,
+            name: guild.guildName,
+          })),
+        },
+        isDashboardInstallationSnapshotPayload,
+        "Dashboard-Sync konnte den Bot-Installationssnapshot nicht melden.",
       );
     },
   };
