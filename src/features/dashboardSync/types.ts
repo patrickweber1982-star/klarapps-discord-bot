@@ -105,6 +105,14 @@ export type DashboardSyncPayload = {
     discordApiMutationEnabled: false;
   };
   serverConfig: DashboardServerConfig;
+  liveTestModules?: {
+    verifySystem: {
+      moduleSlug: "verify-system";
+      enabled: boolean;
+      status: "enabled" | "disabled";
+      source: "dashboard_database";
+    };
+  };
   botInstructions: DashboardBotInstructions;
   security: {
     tokenAuthenticated: true;

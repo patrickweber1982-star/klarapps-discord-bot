@@ -2,6 +2,7 @@ import { ActionRowBuilder, ChannelType, PermissionFlagsBits, SlashCommandBuilder
 
 import { verifyPanelChannelNames } from "../config/channels.js";
 import { buildVerifyPanelEmbed } from "../features/welcome/welcomeEmbeds.js";
+import { readVerifyModuleState } from "../features/dashboardSync/verifyModuleState.js";
 import type { BotCommand } from "../types/command.js";
 import { primaryButton } from "../utils/components.js";
 import { hasAdministrator, hasManageGuild, manageGuildPermissionMessage } from "../utils/permissions.js";
@@ -13,7 +14,7 @@ export const verifyCommand: BotCommand = {
     .setName("verify")
     .setDescription("Erstellt ein Verify-Panel für neue Mitglieder.")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
-  async execute({ interaction }) {
+  async execute({ interaction, config }) {
     if (!interaction.guild) {
       await interaction.reply({
         content: "Dieser Command kann nur auf einem Discord-Server genutzt werden.",
@@ -25,6 +26,17 @@ export const verifyCommand: BotCommand = {
     if (!hasAdministrator(interaction) && !hasManageGuild(interaction)) {
       await interaction.reply({
         content: manageGuildPermissionMessage(),
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const moduleState = await readVerifyModuleState(config, interaction.guild.id);
+
+    if (!moduleState.enabled) {
+      await interaction.reply({
+        content:
+          "Das Verify-System ist fuer diesen Server aktuell im KlarApps Dashboard deaktiviert.",
         ephemeral: true,
       });
       return;

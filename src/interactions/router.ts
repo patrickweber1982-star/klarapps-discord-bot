@@ -37,7 +37,7 @@ export async function routeInteraction(interaction: Interaction, options: Intera
         return;
       }
 
-      if (await handleVerifyButton(interaction)) {
+      if (await handleVerifyButton(interaction, options.config)) {
         return;
       }
 
