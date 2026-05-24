@@ -21,5 +21,5 @@ export function registerEvents(options: RegisterEventsOptions) {
   });
   registerInteractionCreateEvent(options);
   registerGuildMemberAddEvent(options.client);
-  registerGuildLifecycleEvents(options.client, options.config);
+  registerGuildLifecycleEvents(options.client, options.config, options.commands);
 }

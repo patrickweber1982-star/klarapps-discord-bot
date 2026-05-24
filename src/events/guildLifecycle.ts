@@ -1,11 +1,30 @@
 import { Events, type Client } from "discord.js";
 
 import type { BotConfig } from "../config/env.js";
+import { syncCommandsForGuild } from "../features/commands/guildCommandSync.js";
 import { reportDashboardInstallationStatus } from "../features/dashboardSync/syncService.js";
+import type { BotCommand } from "../types/command.js";
 import { logger } from "../utils/logger.js";
 
-export function registerGuildLifecycleEvents(client: Client, config: BotConfig) {
-  client.on(Events.GuildCreate, (guild) => {
+export function registerGuildLifecycleEvents(
+  client: Client,
+  config: BotConfig,
+  commands: Map<string, BotCommand>,
+) {
+  client.on(Events.GuildCreate, async (guild) => {
+    logger.info(
+      `Neue Discord Guild erkannt | id=${guild.id} | name=${guild.name}`,
+    );
+
+    try {
+      await syncCommandsForGuild(guild, commands);
+    } catch (error) {
+      logger.error(
+        `Commands fuer neue Guild konnten nicht registriert werden | guild=${guild.name} | id=${guild.id}`,
+        error,
+      );
+    }
+
     logger.info(
       `Dashboard-Sync meldet neue Guild-Installation | guild=${guild.name} | id=${guild.id}`,
     );

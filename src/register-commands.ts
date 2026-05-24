@@ -8,11 +8,31 @@ import { logger } from "./utils/logger.js";
 
 const config = loadConfig();
 const rest = new REST({ version: "10" }).setToken(config.discordBotToken);
+const payloads = getCommandPayloads();
 
-await rest.put(Routes.applicationGuildCommands(config.discordClientId, config.discordGuildId), {
-  body: getCommandPayloads(),
+logger.info("Command-Registrierung Ziel: global application commands");
+
+await rest.put(Routes.applicationCommands(config.discordClientId), {
+  body: payloads,
 });
 
 logger.success(
-  `Discord-Commands registriert: ${commandList.map((command) => `/${command.name}`).join(", ")}`,
+  `Globale Discord-Commands registriert: ${commandList.map((command) => `/${command.name}`).join(", ")}`,
 );
+
+if (config.discordGuildId) {
+  logger.info(
+    `Command-Registrierung Ziel: configured guild | id=${config.discordGuildId}`,
+  );
+
+  await rest.put(
+    Routes.applicationGuildCommands(config.discordClientId, config.discordGuildId),
+    {
+      body: payloads,
+    },
+  );
+
+  logger.success(
+    `Discord-Commands fuer konfigurierte Guild registriert: ${config.discordGuildId}`,
+  );
+}
