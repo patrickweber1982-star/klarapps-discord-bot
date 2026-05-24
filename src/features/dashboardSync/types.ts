@@ -112,6 +112,12 @@ export type DashboardSyncPayload = {
       status: "enabled" | "disabled";
       source: "dashboard_database";
     };
+    ticketSystem: {
+      moduleSlug: "ticketsystem";
+      enabled: boolean;
+      status: "enabled" | "disabled";
+      source: "dashboard_database";
+    };
   };
   botInstructions: DashboardBotInstructions;
   security: {

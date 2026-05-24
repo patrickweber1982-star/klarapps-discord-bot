@@ -33,7 +33,7 @@ export async function routeInteraction(interaction: Interaction, options: Intera
         return;
       }
 
-      if (await handleTicketButton(interaction)) {
+      if (await handleTicketButton(interaction, options.config)) {
         return;
       }
 

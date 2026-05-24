@@ -1,6 +1,7 @@
 import { ActionRowBuilder, PermissionFlagsBits, SlashCommandBuilder, type ButtonBuilder } from "discord.js";
 
 import { ticketButtonIds, ticketTypes } from "../config/tickets.js";
+import { readTicketModuleState } from "../features/dashboardSync/verifyModuleState.js";
 import { buildFeatureUnavailableEmbed, canUseFeature } from "../features/plans/featureGuard.js";
 import { DEFAULT_PLAN } from "../features/plans/planConfig.js";
 import type { BotCommand } from "../types/command.js";
@@ -14,7 +15,7 @@ export const ticketsCommand: BotCommand = {
     .setName("tickets")
     .setDescription("Erstellt ein Ticket-Panel.")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
-  async execute({ interaction }) {
+  async execute({ interaction, config }) {
     if (!interaction.guild) {
       await interaction.reply({
         content: "Dieser Command kann nur auf einem Discord-Server genutzt werden.",
@@ -26,6 +27,17 @@ export const ticketsCommand: BotCommand = {
     if (!canUseFeature(DEFAULT_PLAN, "tickets")) {
       await interaction.reply({
         embeds: [buildFeatureUnavailableEmbed("tickets", DEFAULT_PLAN)],
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const moduleState = await readTicketModuleState(config, interaction.guild.id);
+
+    if (!moduleState.enabled) {
+      await interaction.reply({
+        content:
+          "Das Ticketsystem ist fuer diesen Server aktuell im KlarApps Dashboard deaktiviert.",
         ephemeral: true,
       });
       return;

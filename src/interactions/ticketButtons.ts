@@ -1,6 +1,8 @@
 import { ActionRowBuilder, type ButtonBuilder, type ButtonInteraction, ChannelType } from "discord.js";
 
+import type { BotConfig } from "../config/env.js";
 import { ticketButtonIds, ticketTypes, type TicketType } from "../config/tickets.js";
+import { readTicketModuleState } from "../features/dashboardSync/verifyModuleState.js";
 import {
   logTicketClosedEvent,
   logTicketCreatedEvent,
@@ -17,8 +19,24 @@ import {
 } from "../utils/tickets.js";
 import { logger } from "../utils/logger.js";
 
-export async function handleTicketButton(interaction: ButtonInteraction) {
+export async function handleTicketButton(
+  interaction: ButtonInteraction,
+  config: BotConfig,
+) {
   if (interaction.customId === ticketButtonIds.claim) {
+    if (interaction.guild) {
+      const moduleState = await readTicketModuleState(config, interaction.guild.id);
+
+      if (!moduleState.enabled) {
+        await interaction.reply({
+          content:
+            "Das Ticketsystem ist fuer diesen Server aktuell im KlarApps Dashboard deaktiviert.",
+          ephemeral: true,
+        });
+        return true;
+      }
+    }
+
     await interaction.reply({
       content: "Feature folgt bald.",
       ephemeral: true,
@@ -37,14 +55,29 @@ export async function handleTicketButton(interaction: ButtonInteraction) {
     return false;
   }
 
-  await openTicket(interaction, ticketType);
+  await openTicket(interaction, ticketType, config);
   return true;
 }
 
-async function openTicket(interaction: ButtonInteraction, ticketType: TicketType) {
+async function openTicket(
+  interaction: ButtonInteraction,
+  ticketType: TicketType,
+  config: BotConfig,
+) {
   if (!interaction.guild) {
     await interaction.reply({
       content: "Tickets koennen nur auf einem Discord-Server erstellt werden.",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const moduleState = await readTicketModuleState(config, interaction.guild.id);
+
+  if (!moduleState.enabled) {
+    await interaction.reply({
+      content:
+        "Das Ticketsystem ist fuer diesen Server aktuell im KlarApps Dashboard deaktiviert.",
       ephemeral: true,
     });
     return;
