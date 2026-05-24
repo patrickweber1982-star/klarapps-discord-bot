@@ -42,7 +42,10 @@ export function loadConfig(): BotConfig {
     dashboardSync: {
       enabled: process.env.KLARBOT_DASHBOARD_SYNC_ENABLED === "true",
       apiBaseUrl: process.env.KLARAPPS_API_BASE_URL?.trim() || null,
-      syncToken: process.env.KLARBOT_SYNC_TOKEN?.trim() || null,
+      syncToken:
+        process.env.KLARAPPS_BOT_API_SECRET?.trim() ||
+        process.env.KLARBOT_SYNC_TOKEN?.trim() ||
+        null,
       timeoutMs: Number(process.env.KLARBOT_SYNC_TIMEOUT_MS ?? 5000),
     },
   };

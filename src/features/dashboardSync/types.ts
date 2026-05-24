@@ -113,6 +113,69 @@ export type DashboardSyncPayload = {
   };
 };
 
+export type DashboardSyncHealthPayload = {
+  ok: true;
+  contractVersion: string;
+  mode: DashboardSyncMode;
+  service: "klarbot-internal-api";
+  endpoints: {
+    health: string;
+    config: string;
+    trial: string;
+    modules: string;
+  };
+  capabilities: {
+    readConfig: true;
+    readModuleStates: true;
+    readTrialState: true;
+    readServerBinding: true;
+    writeSyncEnabled: false;
+    liveDiscordMutationsEnabled: false;
+    websocketSyncEnabled: false;
+  };
+  security: {
+    tokenAuthenticated: true;
+    secretsIncluded: false;
+    botTokenIncluded: false;
+  };
+};
+
+export type DashboardTrialSyncPayload = Pick<
+  DashboardSyncPayload,
+  "ok" | "contractVersion" | "mode" | "guildId" | "binding" | "security"
+> & {
+  trial: DashboardServerConfig["trial"];
+  cooldown: DashboardServerConfig["cooldown"];
+  expirationWarning: DashboardServerConfig["expirationWarning"];
+  botInstructions: Pick<
+    DashboardBotInstructions,
+    | "shouldLeaveServer"
+    | "shouldSendExpirationWarningLater"
+    | "shouldQueueLeaveLater"
+    | "warningMessage"
+    | "upgradeHint"
+  >;
+};
+
+export type DashboardModuleStateSyncPayload = Pick<
+  DashboardSyncPayload,
+  "ok" | "contractVersion" | "mode" | "guildId" | "binding" | "security"
+> & {
+  modules: DashboardServerConfig["modules"];
+  sync: Pick<
+    DashboardSyncPayload["sync"],
+    | "liveSyncEnabled"
+    | "botCanReadCentralConfig"
+    | "botCanWriteWebsiteState"
+    | "dashboardControlsLiveBot"
+    | "discordApiMutationEnabled"
+  >;
+  botInstructions: Pick<
+    DashboardBotInstructions,
+    "shouldApplyModuleChanges" | "shouldEditRolesOrChannels"
+  >;
+};
+
 export type DashboardSyncReadResult =
   | {
       ok: true;
