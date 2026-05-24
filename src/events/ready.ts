@@ -44,6 +44,22 @@ export function registerReadyEvent(options: RegisterReadyEventOptions) {
 
     logger.success("Start erfolgreich");
     logger.info(`Botname: ${readyClient.user.tag}`);
+    logger.info(`Discord Bot User ID laut Login: ${readyClient.user.id}`);
+    logger.info(
+      `Discord Application/Client ID laut ENV: ${config.discordClientId}`,
+    );
+
+    const runtimeApplicationId = readyClient.application?.id ?? readyClient.user.id;
+
+    if (
+      runtimeApplicationId !== config.discordClientId &&
+      readyClient.user.id !== config.discordClientId
+    ) {
+      logger.warn(
+        `DISCORD_CLIENT_ID passt nicht zum eingeloggten Bot-Token. Eingeloggter Bot=${readyClient.user.id}, Application=${runtimeApplicationId}, ENV=${config.discordClientId}. Pruefe den Invite-Link: Er muss die Client-ID dieser laufenden Bot-App verwenden.`,
+      );
+    }
+
     logger.info(`Aktive Commands: ${Array.from(commands.keys()).map((command) => `/${command}`).join(", ")}`);
     logger.info(`Server verbunden laut Cache: ${readyClient.guilds.cache.size}`);
 

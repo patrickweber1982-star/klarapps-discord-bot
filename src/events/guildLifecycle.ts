@@ -13,7 +13,7 @@ export function registerGuildLifecycleEvents(
 ) {
   client.on(Events.GuildCreate, async (guild) => {
     logger.info(
-      `Neue Discord Guild erkannt | id=${guild.id} | name=${guild.name}`,
+      `guildCreate Event empfangen | id=${guild.id} | name=${guild.name}`,
     );
 
     try {
@@ -32,6 +32,9 @@ export function registerGuildLifecycleEvents(
   });
 
   client.on(Events.GuildDelete, (guild) => {
+    logger.info(
+      `guildDelete Event empfangen | guild=${guild.name} | id=${guild.id}`,
+    );
     logger.info(
       `Dashboard-Sync meldet Guild-Entfernung | guild=${guild.name} | id=${guild.id}`,
     );
