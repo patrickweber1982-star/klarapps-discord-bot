@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import { REST, Routes } from "discord.js";
 
 import { getCommandPayloads, commandList } from "./commands/index.js";

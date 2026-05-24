@@ -14,14 +14,23 @@ export type BotConfig = {
   };
 };
 
+export type DashboardSyncEnvironment = BotConfig["dashboardSync"];
+
 const requiredEnvKeys = [
   "DISCORD_BOT_TOKEN",
   "DISCORD_CLIENT_ID",
   "DISCORD_GUILD_ID",
 ] as const;
 
+function readOptionalEnv(key: string) {
+  const value = process.env[key];
+  const trimmed = value?.trim();
+
+  return trimmed && trimmed.length > 0 ? trimmed : null;
+}
+
 function readRequiredEnv(key: (typeof requiredEnvKeys)[number]) {
-  const value = process.env[key]?.trim();
+  const value = readOptionalEnv(key);
 
   if (!value) {
     throw new Error(
@@ -32,6 +41,15 @@ function readRequiredEnv(key: (typeof requiredEnvKeys)[number]) {
   return value;
 }
 
+export function readDashboardSyncEnvironment(): DashboardSyncEnvironment {
+  return {
+    enabled: process.env.KLARBOT_DASHBOARD_SYNC_ENABLED === "true",
+    apiBaseUrl: readOptionalEnv("KLARAPPS_API_BASE_URL"),
+    syncToken: readOptionalEnv("KLARAPPS_BOT_API_SECRET"),
+    timeoutMs: Number(process.env.KLARBOT_SYNC_TIMEOUT_MS ?? 5000),
+  };
+}
+
 export function loadConfig(): BotConfig {
   return {
     discordBotToken: readRequiredEnv("DISCORD_BOT_TOKEN"),
@@ -39,14 +57,6 @@ export function loadConfig(): BotConfig {
     discordGuildId: readRequiredEnv("DISCORD_GUILD_ID"),
     nodeEnv: process.env.NODE_ENV?.trim() || "development",
     debug: process.env.DEBUG === "true",
-    dashboardSync: {
-      enabled: process.env.KLARBOT_DASHBOARD_SYNC_ENABLED === "true",
-      apiBaseUrl: process.env.KLARAPPS_API_BASE_URL?.trim() || null,
-      syncToken:
-        process.env.KLARAPPS_BOT_API_SECRET?.trim() ||
-        process.env.KLARBOT_SYNC_TOKEN?.trim() ||
-        null,
-      timeoutMs: Number(process.env.KLARBOT_SYNC_TIMEOUT_MS ?? 5000),
-    },
+    dashboardSync: readDashboardSyncEnvironment(),
   };
 }

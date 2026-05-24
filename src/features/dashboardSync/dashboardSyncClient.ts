@@ -1,4 +1,7 @@
-import type { BotConfig } from "../../config/env.js";
+import {
+  readDashboardSyncEnvironment,
+  type BotConfig,
+} from "../../config/env.js";
 import type {
   DashboardModuleStateSyncPayload,
   DashboardSyncHealthPayload,
@@ -155,8 +158,8 @@ function disabledResult(message: string): DashboardInternalReadFailure {
   };
 }
 
-export function createDashboardSyncClient(config: BotConfig): DashboardSyncClient {
-  const { dashboardSync } = config;
+export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClient {
+  const dashboardSync = readDashboardSyncEnvironment();
   const hasApiConnection = Boolean(
     dashboardSync.apiBaseUrl && dashboardSync.syncToken,
   );

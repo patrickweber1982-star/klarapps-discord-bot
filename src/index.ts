@@ -1,7 +1,9 @@
+import "dotenv/config";
+
 import { Client, GatewayIntentBits } from "discord.js";
 
 import { createCommandMap } from "./commands/index.js";
-import { loadConfig } from "./config/env.js";
+import { loadConfig, readDashboardSyncEnvironment } from "./config/env.js";
 import { registerEvents } from "./events/index.js";
 import { registerGlobalErrorHandlers } from "./utils/errors.js";
 import { logger } from "./utils/logger.js";
@@ -11,6 +13,14 @@ registerGlobalErrorHandlers();
 const config = loadConfig();
 const commands = createCommandMap();
 const intents = [GatewayIntentBits.Guilds];
+const dashboardSyncEnvironment = readDashboardSyncEnvironment();
+
+logger.info(
+  `Dashboard sync base URL configured: ${dashboardSyncEnvironment.apiBaseUrl ? "yes" : "no"}`,
+);
+logger.info(
+  `Dashboard sync secret configured: ${dashboardSyncEnvironment.syncToken ? "yes" : "no"}`,
+);
 
 if (process.env.DISCORD_ENABLE_GUILD_MEMBERS_INTENT === "true") {
   intents.push(GatewayIntentBits.GuildMembers);

@@ -30,7 +30,6 @@ DISCORD_ENABLE_GUILD_MEMBERS_INTENT=false
 KLARBOT_DASHBOARD_SYNC_ENABLED=false
 KLARAPPS_API_BASE_URL=
 KLARAPPS_BOT_API_SECRET=
-KLARBOT_SYNC_TOKEN=
 KLARBOT_SYNC_TIMEOUT_MS=5000
 ```
 
@@ -41,7 +40,6 @@ KLARBOT_SYNC_TIMEOUT_MS=5000
 - `KLARBOT_DASHBOARD_SYNC_ENABLED`: Optionaler Schalter fuer die spaetere Read-Only Dashboard-Sync-Foundation.
 - `KLARAPPS_API_BASE_URL`: Basis-URL der KlarApps Website, z. B. `https://deine-domain.de`.
 - `KLARAPPS_BOT_API_SECRET`: Server-to-server Secret fuer die interne KlarBot Website-API. Niemals oeffentlich machen.
-- `KLARBOT_SYNC_TOKEN`: Alter Fallback-Name fuer bestehende Setups. Neu bevorzugt ist `KLARAPPS_BOT_API_SECRET`.
 - `KLARBOT_SYNC_TIMEOUT_MS`: Timeout fuer spaetere Config-Reads vom Dashboard.
 
 `.env` bleibt ignoriert und darf nicht committed werden.
