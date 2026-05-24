@@ -3,7 +3,7 @@ import "dotenv/config";
 export type BotConfig = {
   discordBotToken: string;
   discordClientId: string;
-  discordGuildId: string;
+  discordGuildId: string | null;
   nodeEnv: string;
   debug: boolean;
   dashboardSync: {
@@ -19,7 +19,6 @@ export type DashboardSyncEnvironment = BotConfig["dashboardSync"];
 const requiredEnvKeys = [
   "DISCORD_BOT_TOKEN",
   "DISCORD_CLIENT_ID",
-  "DISCORD_GUILD_ID",
 ] as const;
 
 function readOptionalEnv(key: string) {
@@ -54,7 +53,7 @@ export function loadConfig(): BotConfig {
   return {
     discordBotToken: readRequiredEnv("DISCORD_BOT_TOKEN"),
     discordClientId: readRequiredEnv("DISCORD_CLIENT_ID"),
-    discordGuildId: readRequiredEnv("DISCORD_GUILD_ID"),
+    discordGuildId: readOptionalEnv("DISCORD_GUILD_ID"),
     nodeEnv: process.env.NODE_ENV?.trim() || "development",
     debug: process.env.DEBUG === "true",
     dashboardSync: readDashboardSyncEnvironment(),

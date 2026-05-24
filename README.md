@@ -35,7 +35,7 @@ KLARBOT_SYNC_TIMEOUT_MS=5000
 
 - `DISCORD_BOT_TOKEN`: Bot-Token aus dem Discord Developer Portal.
 - `DISCORD_CLIENT_ID`: Application/Client-ID der Discord-App.
-- `DISCORD_GUILD_ID`: Server-ID des Discord-Testservers, auf dem Commands registriert werden.
+- `DISCORD_GUILD_ID`: Optional. Server-ID eines Discord-Testservers, auf dem Commands zusaetzlich zur globalen Registrierung direkt registriert werden.
 - `DISCORD_ENABLE_GUILD_MEMBERS_INTENT`: Optionaler Schalter fuer Join-Welcome. Nur auf `true` setzen, wenn das Guild Members Intent auch im Discord Developer Portal aktiviert ist.
 - `KLARBOT_DASHBOARD_SYNC_ENABLED`: Optionaler Schalter fuer die spaetere Read-Only Dashboard-Sync-Foundation.
 - `KLARAPPS_API_BASE_URL`: Basis-URL der KlarApps Website, z. B. `https://deine-domain.de`.
@@ -46,7 +46,7 @@ KLARBOT_SYNC_TIMEOUT_MS=5000
 
 ## Command-Registrierung
 
-Slash Commands werden fuer den in `DISCORD_GUILD_ID` gesetzten Server registriert:
+Slash Commands werden global fuer alle installierten Server registriert. Wenn `DISCORD_GUILD_ID` gesetzt ist, werden sie zusaetzlich fuer diesen Testserver registriert:
 
 ```bash
 npm run register
@@ -103,7 +103,7 @@ src/
 - Modularer Command Handler mit zentraler Command-Map.
 - Event Handler fuer `ready` und `interactionCreate`, vorbereitet fuer weitere Events wie `guildMemberAdd`.
 - Logger mit `info`, `success`, `moderation`, `creator`, `roles`, `giveaway`, `welcome`, `template`, `ticketLog`, `transcript`, `faq`, `warn`, `error` und `debug`.
-- Config-System mit Validierung fuer `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID` und `DISCORD_GUILD_ID`.
+- Config-System mit Validierung fuer `DISCORD_BOT_TOKEN` und `DISCORD_CLIENT_ID`; `DISCORD_GUILD_ID` ist nur noch optional fuer einen Testserver.
 - Globales Error Handling fuer `unhandledRejection` und `uncaughtException`.
 - Interaction-Fehler werden sauber als KlarBot-Embed beantwortet, damit keine Discord-Fehlermeldung stehen bleibt.
 - Permission-Helfer fuer Admin, Server-Owner, Teamrollen, Moderation und `ManageGuild`.
