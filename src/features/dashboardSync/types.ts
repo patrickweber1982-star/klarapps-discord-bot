@@ -118,6 +118,12 @@ export type DashboardSyncPayload = {
       status: "enabled" | "disabled";
       source: "dashboard_database";
     };
+    rolesChannels: {
+      moduleSlug: "rollen-channels";
+      enabled: boolean;
+      status: "enabled" | "disabled";
+      source: "dashboard_database";
+    };
   };
   botInstructions: DashboardBotInstructions;
   security: {

@@ -7,6 +7,7 @@ import {
 } from "discord.js";
 
 import type { BotCommand } from "../../types/command.js";
+import { readRolesChannelsModuleState } from "../dashboardSync/verifyModuleState.js";
 import { errorEmbed, rolesEmbed } from "../../utils/embeds.js";
 import { hasAdministrator } from "../../utils/permissions.js";
 import { buildFeatureUnavailableEmbed, canUseFeature } from "../plans/featureGuard.js";
@@ -23,10 +24,27 @@ export const rolesPanelCommand: BotCommand = {
   data: new SlashCommandBuilder()
     .setName("roles-panel")
     .setDescription("Erstellt ein Rollen-Panel."),
-  async execute({ interaction }) {
+  async execute({ interaction, config }) {
     if (!interaction.guild) {
       await interaction.reply({
         embeds: [errorEmbed("Dieser Command kann nur auf einem Discord-Server genutzt werden.")],
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const moduleState = await readRolesChannelsModuleState(
+      config,
+      interaction.guild.id,
+    );
+
+    if (!moduleState.enabled) {
+      await interaction.reply({
+        embeds: [
+          errorEmbed(
+            "Rollen & Channels ist fuer diesen Server aktuell im KlarApps Dashboard deaktiviert.",
+          ),
+        ],
         ephemeral: true,
       });
       return;

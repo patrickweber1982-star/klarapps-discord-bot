@@ -4,9 +4,13 @@ import { createDashboardSyncClient } from "./dashboardSyncClient.js";
 
 const verifyModuleSlug = "verify-system";
 const ticketModuleSlug = "ticketsystem";
+const rolesChannelsModuleSlug = "rollen-channels";
 const cacheTtlMs = 30_000;
 
-type LiveModuleSlug = typeof verifyModuleSlug | typeof ticketModuleSlug;
+type LiveModuleSlug =
+  | typeof verifyModuleSlug
+  | typeof ticketModuleSlug
+  | typeof rolesChannelsModuleSlug;
 
 type ModuleCacheEntry = {
   enabled: boolean;
@@ -26,7 +30,15 @@ function cacheKey(guildId: string, moduleSlug: LiveModuleSlug) {
 }
 
 function moduleLabel(moduleSlug: LiveModuleSlug) {
-  return moduleSlug === ticketModuleSlug ? "Ticketsystem" : "Verify-System";
+  if (moduleSlug === ticketModuleSlug) {
+    return "Ticketsystem";
+  }
+
+  if (moduleSlug === rolesChannelsModuleSlug) {
+    return "Rollen & Channels";
+  }
+
+  return "Verify-System";
 }
 
 function fallbackResult(
@@ -122,4 +134,11 @@ export async function readTicketModuleState(
   guildId: string,
 ) {
   return readLiveModuleState(config, guildId, ticketModuleSlug);
+}
+
+export async function readRolesChannelsModuleState(
+  config: BotConfig,
+  guildId: string,
+) {
+  return readLiveModuleState(config, guildId, rolesChannelsModuleSlug);
 }

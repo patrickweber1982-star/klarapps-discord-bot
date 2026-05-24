@@ -49,11 +49,11 @@ export async function routeInteraction(interaction: Interaction, options: Intera
         return;
       }
 
-      if (await handleSelfRoleInteraction(interaction)) {
+      if (await handleSelfRoleInteraction(interaction, options.config)) {
         return;
       }
 
-      if (await handleRoleButton(interaction)) {
+      if (await handleRoleButton(interaction, options.config)) {
         return;
       }
 

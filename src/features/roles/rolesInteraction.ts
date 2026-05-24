@@ -1,11 +1,16 @@
 import type { ButtonInteraction, GuildMember } from "discord.js";
 
+import type { BotConfig } from "../../config/env.js";
+import { readRolesChannelsModuleState } from "../dashboardSync/verifyModuleState.js";
 import { communityEmbed, errorEmbed } from "../../utils/embeds.js";
 import { logger } from "../../utils/logger.js";
 import { getSelfAssignableRoleById } from "./rolesConfig.js";
 import type { RoleToggleResult } from "./types.js";
 
-export async function handleSelfRoleInteraction(interaction: ButtonInteraction) {
+export async function handleSelfRoleInteraction(
+  interaction: ButtonInteraction,
+  config: BotConfig,
+) {
   const selfRole = getSelfAssignableRoleById(interaction.customId);
 
   if (!selfRole) {
@@ -15,6 +20,23 @@ export async function handleSelfRoleInteraction(interaction: ButtonInteraction) 
   if (!interaction.guild) {
     await interaction.reply({
       embeds: [errorEmbed("Rollenbuttons funktionieren nur auf einem Discord-Server.")],
+      ephemeral: true,
+    });
+    return true;
+  }
+
+  const moduleState = await readRolesChannelsModuleState(
+    config,
+    interaction.guild.id,
+  );
+
+  if (!moduleState.enabled) {
+    await interaction.reply({
+      embeds: [
+        errorEmbed(
+          "Rollen & Channels ist fuer diesen Server aktuell im KlarApps Dashboard deaktiviert.",
+        ),
+      ],
       ephemeral: true,
     });
     return true;

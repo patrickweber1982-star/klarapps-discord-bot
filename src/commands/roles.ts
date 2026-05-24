@@ -1,6 +1,7 @@
 import { ActionRowBuilder, SlashCommandBuilder, type ButtonBuilder } from "discord.js";
 
 import { communityRoleList } from "../config/communityRoles.js";
+import { readRolesChannelsModuleState } from "../features/dashboardSync/verifyModuleState.js";
 import type { BotCommand } from "../types/command.js";
 import { ensureCommunityButtonRoles } from "../utils/communityRoles.js";
 import { primaryButton, secondaryButton } from "../utils/components.js";
@@ -12,10 +13,27 @@ export const rolesCommand: BotCommand = {
   data: new SlashCommandBuilder()
     .setName("roles")
     .setDescription("Erstellt ein Rollen-Panel."),
-  async execute({ interaction }) {
+  async execute({ interaction, config }) {
     if (!interaction.guild) {
       await interaction.reply({
         embeds: [errorEmbed("Dieser Command kann nur auf einem Discord-Server genutzt werden.")],
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const moduleState = await readRolesChannelsModuleState(
+      config,
+      interaction.guild.id,
+    );
+
+    if (!moduleState.enabled) {
+      await interaction.reply({
+        embeds: [
+          errorEmbed(
+            "Rollen & Channels ist fuer diesen Server aktuell im KlarApps Dashboard deaktiviert.",
+          ),
+        ],
         ephemeral: true,
       });
       return;
