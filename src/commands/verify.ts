@@ -36,7 +36,7 @@ export const verifyCommand: BotCommand = {
     if (!moduleState.enabled) {
       await interaction.reply({
         content:
-          "Das Verify-System ist fuer diesen Server aktuell im KlarApps Dashboard deaktiviert.",
+          "Das Verify-Modul ist auf diesem Server derzeit deaktiviert.",
         ephemeral: true,
       });
       return;

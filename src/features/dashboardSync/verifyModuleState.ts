@@ -46,7 +46,7 @@ function fallbackResult(
   message: string,
 ): LiveModuleStateResult {
   return {
-    enabled: true,
+    enabled: false,
     source: "fallback",
     message: `${moduleLabel(moduleSlug)}: ${message}`,
   };
@@ -84,7 +84,7 @@ async function readLiveModuleState(
   if (!client.enabled) {
     return fallbackResult(
       moduleSlug,
-      "Dashboard-Sync ist nicht aktiv. Das Modul nutzt lokales Fallback.",
+      "Dashboard-Sync ist nicht aktiv. Das Modul bleibt sicher deaktiviert.",
     );
   }
 
@@ -101,7 +101,7 @@ async function readLiveModuleState(
 
     return fallbackResult(
       moduleSlug,
-      "Dashboard nicht erreichbar. Das Modul bleibt im sicheren Fallback aktiv.",
+      "Dashboard nicht erreichbar. Das Modul bleibt sicher deaktiviert.",
     );
   }
 
