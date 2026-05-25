@@ -74,6 +74,8 @@ async function getSendableTextChannel(
     return {
       ok: false as const,
       reason: "channel_not_found",
+      channelFound: false,
+      canSend: false,
     };
   }
 
@@ -81,6 +83,8 @@ async function getSendableTextChannel(
     return {
       ok: false as const,
       reason: "channel_not_found",
+      channelFound: true,
+      canSend: false,
     };
   }
 
@@ -96,12 +100,16 @@ async function getSendableTextChannel(
     return {
       ok: false as const,
       reason: "missing_permissions",
+      channelFound: true,
+      canSend: false,
     };
   }
 
   return {
     ok: true as const,
     channel,
+    channelFound: true,
+    canSend: true,
   };
 }
 
@@ -226,9 +234,13 @@ export async function sendJoinMessageForMember(
     joinMessageConfig.joinChannelId,
   );
 
+  logger.info(
+    `Join Message Channel pruefung | guild=${member.guild.id} | channelId=${joinMessageConfig.joinChannelId || "missing"} | channelFound=${channelResult.channelFound ? "true" : "false"} | canSend=${channelResult.canSend ? "true" : "false"}`,
+  );
+
   if (!channelResult.ok) {
     logger.warn(
-      `Join Message konnte nicht gesendet werden | guild=${member.guild.id} | channelId=${joinMessageConfig.joinChannelId || "missing"} | reason=${channelResult.reason}`,
+      `Join Message konnte nicht gesendet werden | guild=${member.guild.id} | channelId=${joinMessageConfig.joinChannelId || "missing"} | channelFound=${channelResult.channelFound ? "true" : "false"} | canSend=${channelResult.canSend ? "true" : "false"} | reason=${channelResult.reason}`,
     );
     return;
   }
