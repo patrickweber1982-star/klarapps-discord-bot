@@ -33,7 +33,7 @@ if (process.env.DISCORD_ENABLE_GUILD_MEMBERS_INTENT === "true") {
   intents.push(GatewayIntentBits.GuildMembers);
 } else {
   logger.warn(
-    "GuildMembers Intent ist deaktiviert. Join-Welcome funktioniert erst mit DISCORD_ENABLE_GUILD_MEMBERS_INTENT=true und aktiviertem Intent im Discord Developer Portal.",
+    "GuildMembers Intent ist deaktiviert. Join Message funktioniert erst mit DISCORD_ENABLE_GUILD_MEMBERS_INTENT=true und aktiviertem Intent im Discord Developer Portal.",
   );
 }
 

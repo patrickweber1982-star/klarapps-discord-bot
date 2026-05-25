@@ -2,6 +2,7 @@ import type { Client } from "discord.js";
 
 import type { BotConfig } from "../../config/env.js";
 import { logger } from "../../utils/logger.js";
+import { publishJoinMessageConfigForGuild } from "../joinMessage/joinMessage.js";
 import { publishVerifyPanelForGuild } from "../verify/verifyPanelSync.js";
 import { createDashboardSyncClient } from "./dashboardSyncClient.js";
 
@@ -18,6 +19,16 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
+function readPublishMessageId(result: unknown) {
+  if (!result || typeof result !== "object" || !("messageId" in result)) {
+    return null;
+  }
+
+  const messageId = (result as { messageId?: unknown }).messageId;
+
+  return typeof messageId === "string" ? messageId : null;
+}
+
 async function processNextJob(client: Client, config: BotConfig) {
   if (workerRunning) {
     return;
@@ -27,7 +38,7 @@ async function processNextJob(client: Client, config: BotConfig) {
 
   try {
     const syncClient = createDashboardSyncClient(config);
-    const claim = await syncClient.claimNextVerifyPublishJob();
+    const claim = await syncClient.claimNextBotJob();
 
     if (!claim.ok) {
       logger.warn(`Bot-Job konnte nicht abgerufen werden: ${claim.message}`);
@@ -55,12 +66,25 @@ async function processNextJob(client: Client, config: BotConfig) {
       return;
     }
 
-    const publishResult = await publishVerifyPanelForGuild(
-      client,
-      job.guildId,
-      job.payload.verifyConfig,
-      job.messageId || job.payload.verifyConfig.publishedMessageId || null,
-    );
+    const publishResult =
+      job.jobType === "VERIFY_PUBLISH" && job.payload.verifyConfig
+        ? await publishVerifyPanelForGuild(
+            client,
+            job.guildId,
+            job.payload.verifyConfig,
+            job.messageId || job.payload.verifyConfig.publishedMessageId || null,
+          )
+        : job.jobType === "JOIN_MESSAGE_PUBLISH" &&
+            job.payload.joinMessageConfig
+          ? await publishJoinMessageConfigForGuild(
+              client,
+              job.guildId,
+              job.payload.joinMessageConfig,
+            )
+          : {
+              ok: false as const,
+              reason: "unsupported_job_payload",
+            };
 
     if (!publishResult.ok) {
       await syncClient.completeBotJob({
@@ -74,15 +98,15 @@ async function processNextJob(client: Client, config: BotConfig) {
     await syncClient.completeBotJob({
       jobId: job.id,
       status: "success",
-      messageId: publishResult.messageId,
+      messageId: readPublishMessageId(publishResult),
       result: {
         channelId: publishResult.channelId,
-        messageId: publishResult.messageId,
+        messageId: readPublishMessageId(publishResult),
       },
     });
 
     logger.success(
-      `Bot-Job erfolgreich verarbeitet | id=${job.id} | guild=${job.guildId} | message=${publishResult.messageId}`,
+      `Bot-Job erfolgreich verarbeitet | id=${job.id} | guild=${job.guildId} | type=${job.jobType}`,
     );
   } catch (error) {
     logger.error("Bot-Job Worker Fehler", error);

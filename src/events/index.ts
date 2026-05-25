@@ -22,6 +22,6 @@ export function registerEvents(options: RegisterEventsOptions) {
   });
   registerInteractionCreateEvent(options);
   registerMessageReactionAddEvent(options.client, options.config);
-  registerGuildMemberAddEvent(options.client);
+  registerGuildMemberAddEvent(options.client, options.config);
   registerGuildLifecycleEvents(options.client, options.config, options.commands);
 }

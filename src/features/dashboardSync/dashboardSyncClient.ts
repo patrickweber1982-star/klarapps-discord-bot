@@ -17,6 +17,9 @@ export type DashboardSyncClient = {
   readVerifyConfig(
     guildId: string,
   ): Promise<DashboardInternalReadResult<DashboardVerifyConfigPayload>>;
+  readJoinMessageConfig(
+    guildId: string,
+  ): Promise<DashboardInternalReadResult<DashboardJoinMessageConfigPayload>>;
   readGuildConfig(guildId: string): Promise<DashboardSyncReadResult>;
   readGuildTrial(
     guildId: string,
@@ -38,7 +41,7 @@ export type DashboardSyncClient = {
   reportGuildSnapshot(input: DashboardGuildSnapshotInput): Promise<
     DashboardInternalReadResult<DashboardGuildSnapshotPayload>
   >;
-  claimNextVerifyPublishJob(): Promise<
+  claimNextBotJob(): Promise<
     DashboardInternalReadResult<DashboardBotJobClaimPayload>
   >;
   completeBotJob(input: {
@@ -152,9 +155,32 @@ export type DashboardVerifyConfigPayload = {
 export type DashboardVerifyConfig =
   DashboardVerifyConfigPayload["verifyConfig"];
 
+export type DashboardJoinMessageConfigPayload = {
+  ok: true;
+  mode: "klarbot_join_message_config";
+  guildId: string;
+  joinMessageConfig: {
+    guildId: string;
+    enabled: boolean;
+    status: string;
+    joinChannelId: string;
+    messageText: string;
+    pingUser: boolean;
+    useEmbed: boolean;
+    embedTitle: string;
+    embedColor: string;
+    embedFooter: string;
+    publishedAt?: string;
+    updatedAt: string;
+  };
+};
+
+export type DashboardJoinMessageConfig =
+  DashboardJoinMessageConfigPayload["joinMessageConfig"];
+
 type DashboardBotJob = {
   id: string;
-  jobType: "VERIFY_PUBLISH";
+  jobType: "VERIFY_PUBLISH" | "JOIN_MESSAGE_PUBLISH";
   status: "processing";
   guildId: string;
   moduleSlug: string | null;
@@ -162,7 +188,8 @@ type DashboardBotJob = {
   channelId: string | null;
   messageId: string | null;
   payload: {
-    verifyConfig: DashboardVerifyConfig;
+    verifyConfig?: DashboardVerifyConfig;
+    joinMessageConfig?: DashboardJoinMessageConfig;
     guildName?: string;
   };
   attempts: number;
@@ -179,7 +206,7 @@ type DashboardBotJobCompletedPayload = {
   mode: "klarbot_job_completed";
   job: {
     id: string;
-    jobType: "VERIFY_PUBLISH";
+    jobType: "VERIFY_PUBLISH" | "JOIN_MESSAGE_PUBLISH";
     status: "success" | "failed";
     guildId: string;
     messageId: string | null;
@@ -329,6 +356,33 @@ function isDashboardVerifyConfigPayload(
   );
 }
 
+function isDashboardJoinMessageConfigPayload(
+  value: unknown,
+): value is DashboardJoinMessageConfigPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Partial<DashboardJoinMessageConfigPayload>;
+  const config = payload.joinMessageConfig;
+
+  return (
+    payload.ok === true &&
+    payload.mode === "klarbot_join_message_config" &&
+    typeof payload.guildId === "string" &&
+    Boolean(config) &&
+    typeof config?.enabled === "boolean" &&
+    typeof config?.status === "string" &&
+    typeof config?.joinChannelId === "string" &&
+    typeof config?.messageText === "string" &&
+    typeof config?.pingUser === "boolean" &&
+    typeof config?.useEmbed === "boolean" &&
+    typeof config?.embedTitle === "string" &&
+    typeof config?.embedColor === "string" &&
+    typeof config?.embedFooter === "string"
+  );
+}
+
 function isDashboardGuildSnapshotPayload(
   value: unknown,
 ): value is DashboardGuildSnapshotPayload {
@@ -370,20 +424,39 @@ function isDashboardBotJobClaimPayload(
   }
 
   const verifyConfig = job.payload?.verifyConfig;
+  const joinMessageConfig = job.payload?.joinMessageConfig;
 
-  return (
-    job.jobType === "VERIFY_PUBLISH" &&
-    job.status === "processing" &&
-    typeof job.id === "string" &&
-    typeof job.guildId === "string" &&
-    Boolean(verifyConfig) &&
-    typeof verifyConfig?.verifyChannelId === "string" &&
-    typeof verifyConfig?.embedTitle === "string" &&
-    typeof verifyConfig?.embedDescription === "string" &&
-    (verifyConfig?.confirmationMode === "button" ||
-      verifyConfig?.confirmationMode === "emoji") &&
-    typeof verifyConfig?.verifiedRoleId === "string"
-  );
+  if (
+    job.status !== "processing" ||
+    typeof job.id !== "string" ||
+    typeof job.guildId !== "string"
+  ) {
+    return false;
+  }
+
+  if (job.jobType === "VERIFY_PUBLISH") {
+    return (
+      Boolean(verifyConfig) &&
+      typeof verifyConfig?.verifyChannelId === "string" &&
+      typeof verifyConfig?.embedTitle === "string" &&
+      typeof verifyConfig?.embedDescription === "string" &&
+      (verifyConfig?.confirmationMode === "button" ||
+        verifyConfig?.confirmationMode === "emoji") &&
+      typeof verifyConfig?.verifiedRoleId === "string"
+    );
+  }
+
+  if (job.jobType === "JOIN_MESSAGE_PUBLISH") {
+    return (
+      Boolean(joinMessageConfig) &&
+      typeof joinMessageConfig?.joinChannelId === "string" &&
+      typeof joinMessageConfig?.messageText === "string" &&
+      typeof joinMessageConfig?.pingUser === "boolean" &&
+      typeof joinMessageConfig?.useEmbed === "boolean"
+    );
+  }
+
+  return false;
 }
 
 function isDashboardBotJobCompletedPayload(
@@ -398,7 +471,8 @@ function isDashboardBotJobCompletedPayload(
   return (
     payload.ok === true &&
     payload.mode === "klarbot_job_completed" &&
-    payload.job?.jobType === "VERIFY_PUBLISH" &&
+    (payload.job?.jobType === "VERIFY_PUBLISH" ||
+      payload.job?.jobType === "JOIN_MESSAGE_PUBLISH") &&
     (payload.job.status === "success" || payload.job.status === "failed")
   );
 }
@@ -580,6 +654,14 @@ export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClie
         { requireEnabled: false },
       );
     },
+    async readJoinMessageConfig(guildId: string) {
+      return readInternal(
+        `/api/bot/guilds/${encodeURIComponent(guildId)}/join-message-config`,
+        isDashboardJoinMessageConfigPayload,
+        "Join-Message-Konfiguration konnte nicht geladen werden.",
+        { requireEnabled: false },
+      );
+    },
     async readGuildConfig(guildId: string): Promise<DashboardSyncReadResult> {
       return readInternal(
         `/api/klarbot/internal/guild/${encodeURIComponent(guildId)}/config`,
@@ -640,14 +722,12 @@ export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClie
         "Dashboard-Sync konnte den Guild-Snapshot nicht speichern.",
       );
     },
-    async claimNextVerifyPublishJob() {
+    async claimNextBotJob() {
       return postInternal(
         "/api/bot/jobs/claim",
-        {
-          jobType: "VERIFY_PUBLISH",
-        },
+        {},
         isDashboardBotJobClaimPayload,
-        "Dashboard-Sync konnte keinen Verify-Publish-Job abrufen.",
+        "Dashboard-Sync konnte keinen Bot-Job abrufen.",
       );
     },
     async completeBotJob(input) {

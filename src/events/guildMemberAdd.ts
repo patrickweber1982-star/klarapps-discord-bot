@@ -1,9 +1,10 @@
 import { Events, type Client } from "discord.js";
 
-import { sendWelcomeMessageForMember } from "../features/welcome/onboardingFlow.js";
+import type { BotConfig } from "../config/env.js";
+import { sendJoinMessageForMember } from "../features/joinMessage/joinMessage.js";
 
-export function registerGuildMemberAddEvent(client: Client) {
+export function registerGuildMemberAddEvent(client: Client, config: BotConfig) {
   client.on(Events.GuildMemberAdd, async (member) => {
-    await sendWelcomeMessageForMember(member);
+    await sendJoinMessageForMember(member, config);
   });
 }
