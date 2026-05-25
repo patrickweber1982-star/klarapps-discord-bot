@@ -56,12 +56,15 @@ export function readDashboardSyncEnvironment(): DashboardSyncEnvironment {
 }
 
 export function readInternalApiEnvironment(): InternalApiEnvironment {
+  const secret =
+    readOptionalEnv("KLARBOT_INTERNAL_API_SECRET") ??
+    readOptionalEnv("KLARAPPS_BOT_API_SECRET");
+  const enabledFlag = readOptionalEnv("KLARBOT_INTERNAL_API_ENABLED");
+
   return {
-    enabled: process.env.KLARBOT_INTERNAL_API_ENABLED === "true",
+    enabled: enabledFlag ? enabledFlag === "true" : Boolean(secret),
     port: Number(process.env.KLARBOT_INTERNAL_API_PORT ?? 4107),
-    secret:
-      readOptionalEnv("KLARBOT_INTERNAL_API_SECRET") ??
-      readOptionalEnv("KLARAPPS_BOT_API_SECRET"),
+    secret,
   };
 }
 

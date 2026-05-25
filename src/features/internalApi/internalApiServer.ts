@@ -98,7 +98,16 @@ async function handleGuildChannels(
   }
 
   const fetchedChannels = await guild.channels.fetch();
-  const channels = [];
+  const channels: Array<{
+    id: string;
+    channelId: string;
+    name: string;
+    type: string;
+    position: number | null;
+    parentId: string | null;
+    botCanView: boolean;
+    botCanSend: boolean;
+  }> = [];
 
   for (const channel of fetchedChannels.values()) {
     if (!channel) continue;
@@ -107,21 +116,24 @@ async function handleGuildChannels(
       channel.type === ChannelType.GuildText ||
       channel.type === ChannelType.GuildAnnouncement;
     const permissions = client.user ? channel.permissionsFor(client.user) : null;
-    const botCanSend =
-      !permissions ||
-      permissions.has([
-        PermissionFlagsBits.ViewChannel,
-        PermissionFlagsBits.SendMessages,
-      ]);
+    const botCanView = Boolean(
+      permissions?.has(PermissionFlagsBits.ViewChannel),
+    );
+    const botCanSend = Boolean(
+      permissions?.has(PermissionFlagsBits.SendMessages),
+    );
 
-    if (!isTextChannel || !botCanSend) continue;
+    if (!isTextChannel || !botCanView || !botCanSend) continue;
 
     channels.push({
+      id: channel.id,
       channelId: channel.id,
       name: channel.name,
       type: String(channel.type),
-      textBased: true,
-      botCanSend: true,
+      position: channel.position ?? null,
+      parentId: channel.parentId ?? null,
+      botCanView,
+      botCanSend,
     });
   }
 
