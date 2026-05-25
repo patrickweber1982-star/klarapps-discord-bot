@@ -14,6 +14,9 @@ export type DashboardSyncClient = {
   enabled: boolean;
   installationReportingEnabled: boolean;
   readHealth(): Promise<DashboardInternalReadResult<DashboardSyncHealthPayload>>;
+  readVerifyConfig(
+    guildId: string,
+  ): Promise<DashboardInternalReadResult<DashboardVerifyConfigPayload>>;
   readGuildConfig(guildId: string): Promise<DashboardSyncReadResult>;
   readGuildTrial(
     guildId: string,
@@ -66,6 +69,25 @@ type DashboardInstallationSnapshotPayload = {
     installedGuildCount: number;
     removedGuildCount: number;
     lastSyncedAt: string | Date | null;
+  };
+};
+
+export type DashboardVerifyConfigPayload = {
+  ok: true;
+  mode: "klarbot_verify_config";
+  guildId: string;
+  verifyConfig: {
+    guildId: string;
+    verifyChannelId: string;
+    embedTitle: string;
+    embedDescription: string;
+    embedFooter: string;
+    confirmationMode: "button" | "emoji";
+    confirmationEmoji: string;
+    buttonLabel: string;
+    verifiedRoleId: string;
+    removeRoleId: string;
+    updatedAt: string;
   };
 };
 
@@ -181,6 +203,31 @@ function isDashboardInstallationSnapshotPayload(
     Boolean(payload.snapshot) &&
     typeof payload.snapshot?.installedGuildCount === "number" &&
     typeof payload.snapshot?.removedGuildCount === "number"
+  );
+}
+
+function isDashboardVerifyConfigPayload(
+  value: unknown,
+): value is DashboardVerifyConfigPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Partial<DashboardVerifyConfigPayload>;
+  const config = payload.verifyConfig;
+
+  return (
+    payload.ok === true &&
+    payload.mode === "klarbot_verify_config" &&
+    typeof payload.guildId === "string" &&
+    Boolean(config) &&
+    typeof config?.verifyChannelId === "string" &&
+    typeof config?.embedTitle === "string" &&
+    typeof config?.embedDescription === "string" &&
+    typeof config?.embedFooter === "string" &&
+    (config?.confirmationMode === "button" ||
+      config?.confirmationMode === "emoji") &&
+    typeof config?.buttonLabel === "string"
   );
 }
 
@@ -350,6 +397,13 @@ export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClie
         "/api/klarbot/internal/health",
         isDashboardSyncHealthPayload,
         "Dashboard-Sync Health konnte nicht gelesen werden.",
+      );
+    },
+    async readVerifyConfig(guildId: string) {
+      return readInternal(
+        `/api/bot/guilds/${encodeURIComponent(guildId)}/verify-config`,
+        isDashboardVerifyConfigPayload,
+        "Verify-Konfiguration konnte nicht geladen werden.",
       );
     },
     async readGuildConfig(guildId: string): Promise<DashboardSyncReadResult> {

@@ -14,7 +14,7 @@ import { rolesPanelCommand } from "../features/roles/rolesPanel.js";
 import { resetServerCommand } from "../features/reset/resetCommand.js";
 import type { BotCommand } from "../types/command.js";
 
-export const commandList = [
+export const disabledCommandList = [
   klarbotCommand,
   setupCommand,
   helpCommand,
@@ -30,6 +30,8 @@ export const commandList = [
   kickCommand,
   resetServerCommand,
 ] satisfies BotCommand[];
+
+export const commandList = [] satisfies BotCommand[];
 
 export function createCommandMap(commands: BotCommand[] = commandList) {
   return new Map(commands.map((command) => [command.name, command]));

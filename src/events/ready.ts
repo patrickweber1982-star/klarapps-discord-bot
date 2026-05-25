@@ -6,6 +6,7 @@ import {
   syncCommandsForGuilds,
 } from "../features/commands/guildCommandSync.js";
 import { prepareDashboardSyncForGuilds } from "../features/dashboardSync/syncService.js";
+import { sendVerifyPanelForGuild } from "../features/verify/verifyPanelSync.js";
 import type { BotCommand } from "../types/command.js";
 import { logger } from "../utils/logger.js";
 
@@ -68,6 +69,19 @@ export function registerReadyEvent(options: RegisterReadyEventOptions) {
 
       await syncCommandsForGuilds(installedGuilds, commands);
       void prepareDashboardSyncForGuilds(installedGuilds, config);
+
+      if (process.env.KLARBOT_SEND_VERIFY_TEST_PANEL === "true") {
+        const targetGuildId =
+          process.env.KLARBOT_TEST_GUILD_ID?.trim() || installedGuilds[0]?.id;
+
+        if (targetGuildId) {
+          await sendVerifyPanelForGuild(readyClient, config, targetGuildId);
+        } else {
+          logger.warn(
+            "Verify-Testpanel wurde angefordert, aber es ist keine Guild verfuegbar.",
+          );
+        }
+      }
     } catch (error) {
       logger.error(
         "Startup Guild Fetch, Command-Sync oder Dashboard-Sync konnte nicht vollstaendig ausgefuehrt werden",
