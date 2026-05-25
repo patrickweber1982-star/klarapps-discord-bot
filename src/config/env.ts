@@ -76,8 +76,8 @@ export function readDashboardSyncEnvironment(): DashboardSyncEnvironment {
 
 export function readInternalApiEnvironment(): InternalApiEnvironment {
   const secret =
-    readOptionalEnv("KLARBOT_INTERNAL_API_SECRET") ??
-    readOptionalEnv("KLARAPPS_BOT_API_SECRET");
+    readOptionalEnv("KLARAPPS_BOT_API_SECRET") ??
+    readOptionalEnv("KLARBOT_INTERNAL_API_SECRET");
   const enabledFlag = readOptionalBooleanEnv("KLARBOT_INTERNAL_API_ENABLED");
 
   return {

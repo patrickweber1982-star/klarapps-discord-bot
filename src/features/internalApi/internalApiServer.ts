@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { ChannelType, PermissionFlagsBits, type Client } from "discord.js";
 
@@ -17,15 +18,24 @@ function sendJson(
   response.end(JSON.stringify(payload));
 }
 
-function readBearerToken(request: IncomingMessage) {
+function readAuthToken(request: IncomingMessage) {
   const header = request.headers.authorization ?? "";
-  const [scheme, token] = header.split(" ");
+  const trimmedHeader = header.trim();
 
-  if (scheme?.toLowerCase() !== "bearer" || !token) {
+  if (!trimmedHeader) {
     return null;
   }
 
-  return token.trim();
+  const [scheme, ...tokenParts] = trimmedHeader.split(/\s+/);
+
+  if (scheme?.toLowerCase() === "bearer") {
+    const token = tokenParts.join(" ").trim();
+
+    return token || null;
+  }
+
+  // Rueckwaertskompatibilitaet fuer alte interne Aufrufe mit reinem Secret.
+  return trimmedHeader;
 }
 
 function readJsonBody(request: IncomingMessage) {
@@ -65,7 +75,20 @@ function authorize(request: IncomingMessage, config: BotConfig) {
     return false;
   }
 
-  return readBearerToken(request) === expected;
+  const provided = readAuthToken(request);
+
+  if (!provided) {
+    return false;
+  }
+
+  const providedBuffer = Buffer.from(provided);
+  const expectedBuffer = Buffer.from(expected);
+
+  if (providedBuffer.length !== expectedBuffer.length) {
+    return false;
+  }
+
+  return timingSafeEqual(providedBuffer, expectedBuffer);
 }
 
 function readRequestUrl(request: IncomingMessage) {
@@ -176,6 +199,14 @@ export function startInternalApiServer(client: Client, config: BotConfig) {
 
     const requestUrl = readRequestUrl(request);
     const channelGuildId = isGuildChannelsRoute(requestUrl.pathname);
+
+    if (request.method === "GET" && requestUrl.pathname === "/internal/health") {
+      sendJson(response, 200, {
+        ok: true,
+        mode: "klarbot_internal_health",
+      });
+      return;
+    }
 
     if (request.method === "GET" && channelGuildId) {
       await handleGuildChannels(client, channelGuildId, response);
