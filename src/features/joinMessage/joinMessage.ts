@@ -32,14 +32,20 @@ function applyPlaceholders(
   member: GuildMember,
   options: { pingUser: boolean },
 ) {
-  const userValue = options.pingUser
-    ? member.toString()
-    : member.displayName || member.user.username;
-
-  return template
-    .replaceAll("{user}", userValue)
-    .replaceAll("{username}", member.user.username)
+  const username =
+    member.user.globalName?.trim() ||
+    member.displayName?.trim() ||
+    member.user.username;
+  const withPlaceholders = template
+    .replaceAll("{user}", member.toString())
+    .replaceAll("{username}", username)
     .replaceAll("{server}", member.guild.name);
+
+  if (options.pingUser && !template.includes("{user}")) {
+    return `${member.toString()} ${withPlaceholders}`.trim();
+  }
+
+  return withPlaceholders;
 }
 
 async function getSendableTextChannel(
@@ -136,6 +142,10 @@ export async function sendJoinMessageForMember(
   member: GuildMember,
   config: BotConfig,
 ) {
+  logger.welcome(
+    `Join Message Event empfangen | user=${member.user.tag} | guild=${member.guild.name}`,
+  );
+
   const syncClient = createDashboardSyncClient(config);
   const result = await syncClient.readJoinMessageConfig(member.guild.id);
 
@@ -177,7 +187,7 @@ export async function sendJoinMessageForMember(
   try {
     if (joinMessageConfig.useEmbed) {
       const shouldPingInContent =
-        joinMessageConfig.pingUser &&
+        joinMessageConfig.pingUser ||
         joinMessageConfig.messageText.includes("{user}");
       const embed = new EmbedBuilder()
         .setTitle(joinMessageConfig.embedTitle || "Willkommen")

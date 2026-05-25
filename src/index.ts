@@ -29,11 +29,14 @@ logger.info(
   `KlarBot interne API konfiguriert: ${config.internalApi.enabled ? "aktiv" : "deaktiviert"} | host=${config.internalApi.host} | port=${config.internalApi.port} | secret=${config.internalApi.secret ? "yes" : "no"}`,
 );
 
-if (process.env.DISCORD_ENABLE_GUILD_MEMBERS_INTENT === "true") {
-  intents.push(GatewayIntentBits.GuildMembers);
-} else {
+if (process.env.DISCORD_ENABLE_GUILD_MEMBERS_INTENT === "false") {
   logger.warn(
-    "GuildMembers Intent ist deaktiviert. Join Message funktioniert erst mit DISCORD_ENABLE_GUILD_MEMBERS_INTENT=true und aktiviertem Intent im Discord Developer Portal.",
+    "GuildMembers Intent wurde per ENV deaktiviert. Join Message funktioniert dann nicht bei neuen Mitgliedern.",
+  );
+} else {
+  intents.push(GatewayIntentBits.GuildMembers);
+  logger.info(
+    "GuildMembers Intent ist im Bot aktiviert. Das Privileged Intent muss auch im Discord Developer Portal aktiv sein.",
   );
 }
 
