@@ -19,16 +19,85 @@ function isDiscordSnowflake(value: string) {
   return /^\d{8,32}$/.test(value);
 }
 
+function configuredEmoji(value: string | undefined) {
+  const normalized = value?.trim();
+
+  if (!normalized) {
+    return "";
+  }
+
+  const knownEmojis: Record<string, string> = {
+    check: "✅",
+    "thumbs-up": "👍",
+    star: "⭐",
+    lock: "🔒",
+    gaming: "🎮",
+  };
+
+  return knownEmojis[normalized] ?? normalized;
+}
+
+function optionalBlock(title: string, value: string | undefined) {
+  const text = value?.trim();
+
+  if (!text) {
+    return [];
+  }
+
+  return [`**${title}**`, text, ""];
+}
+
 function confirmationText(input: {
   mode: "button" | "emoji";
   emoji: string;
   buttonLabel: string;
+  confirmationHint?: string;
 }) {
+  const hint = input.confirmationHint?.trim();
+
   if (input.mode === "emoji") {
-    return `Bestaetigung per Emoji vorbereitet: ${input.emoji || "Emoji noch nicht gesetzt"}`;
+    return [
+      `Bestaetigung per Emoji vorbereitet: ${
+        configuredEmoji(input.emoji) || "Emoji noch nicht gesetzt"
+      }`,
+      hint,
+    ]
+      .filter(Boolean)
+      .join("\n");
   }
 
-  return `Bestaetigung per Button: ${input.buttonLabel || "Verifizieren"}`;
+  return [
+    `Bestaetigung per Button: ${input.buttonLabel || "Verifizieren"}`,
+    hint,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function buildVerifyDescription(verifyConfig: DashboardVerifyConfig) {
+  return [
+    ...optionalBlock("Beschreibung", verifyConfig.channelDescription),
+    verifyConfig.embedDescription ||
+      "Bitte bestaetige, um Zugriff auf den Server zu erhalten.",
+    "",
+    ...optionalBlock("Channel-Hinweis", verifyConfig.channelHint),
+    confirmationText({
+      mode: verifyConfig.confirmationMode,
+      emoji: verifyConfig.confirmationEmoji,
+      buttonLabel: verifyConfig.buttonLabel,
+      confirmationHint: verifyConfig.confirmationHint,
+    }),
+    "",
+    ...optionalBlock("Rollenhinweis", verifyConfig.roleHint),
+  ]
+    .filter((line, index, lines) => {
+      if (line !== "") {
+        return true;
+      }
+
+      return lines[index - 1] !== "" && lines[index + 1] !== "";
+    })
+    .join("\n");
 }
 
 export async function sendVerifyPanelForGuild(
@@ -164,30 +233,25 @@ export async function publishVerifyPanelForGuild(
 
   const embed = new EmbedBuilder()
     .setTitle(verifyConfig.embedTitle || "Verify")
-    .setDescription(
-      [
-        verifyConfig.embedDescription ||
-          "Bitte bestaetige, um Zugriff auf den Server zu erhalten.",
-        "",
-        confirmationText({
-          mode: verifyConfig.confirmationMode,
-          emoji: verifyConfig.confirmationEmoji,
-          buttonLabel: verifyConfig.buttonLabel,
-        }),
-      ].join("\n"),
-    )
+    .setDescription(buildVerifyDescription(verifyConfig))
     .setColor(0x14b8a6)
     .setFooter({ text: verifyConfig.embedFooter || "KlarBot Verify" })
     .setTimestamp();
+  const verifyButton = primaryButton(
+    verifyButtonId,
+    verifyConfig.buttonLabel || "Verifizieren",
+  );
+  const emoji = configuredEmoji(verifyConfig.confirmationEmoji);
+
+  if (emoji) {
+    verifyButton.setEmoji(emoji);
+  }
 
   const components =
     verifyConfig.confirmationMode === "button"
       ? [
           new ActionRowBuilder<ButtonBuilder>().addComponents(
-            primaryButton(
-              verifyButtonId,
-              verifyConfig.buttonLabel || "Verifizieren",
-            ),
+            verifyButton,
           ),
         ]
       : [];
