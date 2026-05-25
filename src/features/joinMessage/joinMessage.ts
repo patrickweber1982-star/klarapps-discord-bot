@@ -13,6 +13,21 @@ import {
   type DashboardJoinMessageConfig,
 } from "../dashboardSync/dashboardSyncClient.js";
 
+type ActiveJoinMessageConfigResult =
+  | {
+      ok: true;
+      config: DashboardJoinMessageConfig;
+    }
+  | {
+      ok: false;
+      reason:
+        | "config_not_found"
+        | "config_disabled"
+        | "missing_channel"
+        | "sync_error";
+      message: string;
+    };
+
 function embedColor(value: string | undefined) {
   const colors: Record<string, number> = {
     "klarapps-teal": 0x14b8a6,
@@ -90,6 +105,54 @@ async function getSendableTextChannel(
   };
 }
 
+export async function loadActiveJoinMessageConfig(
+  guildId: string,
+  config: BotConfig,
+): Promise<ActiveJoinMessageConfigResult> {
+  const syncClient = createDashboardSyncClient(config);
+  const result = await syncClient.readJoinMessageConfig(guildId);
+
+  if (!result.ok) {
+    logger.warn(
+      `Join Message Config konnte nicht geladen werden | guild=${guildId} | configFound=false | enabled=false | channelId=false | status=${result.status ?? "n/a"} | reason=${result.message}`,
+    );
+
+    return {
+      ok: false,
+      reason: result.status === 404 ? "config_not_found" : "sync_error",
+      message: result.message,
+    };
+  }
+
+  const joinMessageConfig = result.payload.joinMessageConfig;
+  const channelAvailable = Boolean(joinMessageConfig.joinChannelId);
+
+  logger.info(
+    `Join Message Config geladen | guild=${guildId} | configFound=true | enabled=${joinMessageConfig.enabled} | status=${joinMessageConfig.status} | channelId=${channelAvailable ? "true" : "false"}`,
+  );
+
+  if (!joinMessageConfig.enabled) {
+    return {
+      ok: false,
+      reason: "config_disabled",
+      message: "Join Message ist fuer diese Guild deaktiviert.",
+    };
+  }
+
+  if (!channelAvailable) {
+    return {
+      ok: false,
+      reason: "missing_channel",
+      message: "Join Message hat keinen Channel konfiguriert.",
+    };
+  }
+
+  return {
+    ok: true,
+    config: joinMessageConfig,
+  };
+}
+
 export async function publishJoinMessageConfigForGuild(
   client: Client,
   guildId: string,
@@ -146,24 +209,16 @@ export async function sendJoinMessageForMember(
     `Join Message Event empfangen | user=${member.user.tag} | guild=${member.guild.name}`,
   );
 
-  const syncClient = createDashboardSyncClient(config);
-  const result = await syncClient.readJoinMessageConfig(member.guild.id);
+  const activeConfig = await loadActiveJoinMessageConfig(member.guild.id, config);
 
-  if (!result.ok) {
-    logger.debug(
-      `Join Message uebersprungen | guild=${member.guild.id} | reason=${result.message}`,
+  if (!activeConfig.ok) {
+    logger.info(
+      `Join Message uebersprungen | guild=${member.guild.id} | reason=${activeConfig.reason} | message=${activeConfig.message}`,
     );
     return;
   }
 
-  const joinMessageConfig = result.payload.joinMessageConfig;
-
-  if (!joinMessageConfig.enabled) {
-    logger.debug(
-      `Join Message deaktiviert | guild=${member.guild.id}`,
-    );
-    return;
-  }
+  const joinMessageConfig = activeConfig.config;
 
   const channelResult = await getSendableTextChannel(
     member.client,
@@ -173,7 +228,7 @@ export async function sendJoinMessageForMember(
 
   if (!channelResult.ok) {
     logger.warn(
-      `Join Message konnte nicht gesendet werden | guild=${member.guild.id} | reason=${channelResult.reason}`,
+      `Join Message konnte nicht gesendet werden | guild=${member.guild.id} | channelId=${joinMessageConfig.joinChannelId || "missing"} | reason=${channelResult.reason}`,
     );
     return;
   }
