@@ -198,9 +198,28 @@ export type DashboardJoinTestConfigPayload = {
 export type DashboardJoinTestConfig =
   DashboardJoinTestConfigPayload["joinTestConfig"];
 
+export type DashboardInfoBlockConfig = {
+  id: string;
+  type: "image" | "embed";
+  sortOrder: number;
+  imageUrl: string;
+  title: string;
+  description: string;
+  color: string;
+  footer: string;
+};
+
+export type DashboardInfoConfig = {
+  guildId?: string;
+  channelId: string;
+  enabled?: boolean;
+  publishedAt?: string;
+  blocks: DashboardInfoBlockConfig[];
+};
+
 type DashboardBotJob = {
   id: string;
-  jobType: "VERIFY_PUBLISH" | "JOIN_MESSAGE_PUBLISH";
+  jobType: "VERIFY_PUBLISH" | "JOIN_MESSAGE_PUBLISH" | "INFO_PUBLISH";
   status: "processing";
   guildId: string;
   moduleSlug: string | null;
@@ -210,6 +229,7 @@ type DashboardBotJob = {
   payload: {
     verifyConfig?: DashboardVerifyConfig;
     joinMessageConfig?: DashboardJoinMessageConfig;
+    infoConfig?: DashboardInfoConfig;
     guildName?: string;
   };
   attempts: number;
@@ -226,7 +246,7 @@ type DashboardBotJobCompletedPayload = {
   mode: "klarbot_job_completed";
   job: {
     id: string;
-    jobType: "VERIFY_PUBLISH" | "JOIN_MESSAGE_PUBLISH";
+    jobType: "VERIFY_PUBLISH" | "JOIN_MESSAGE_PUBLISH" | "INFO_PUBLISH";
     status: "success" | "failed";
     guildId: string;
     messageId: string | null;
@@ -467,6 +487,7 @@ function isDashboardBotJobClaimPayload(
 
   const verifyConfig = job.payload?.verifyConfig;
   const joinMessageConfig = job.payload?.joinMessageConfig;
+  const infoConfig = job.payload?.infoConfig;
 
   if (
     job.status !== "processing" ||
@@ -498,6 +519,14 @@ function isDashboardBotJobClaimPayload(
     );
   }
 
+  if (job.jobType === "INFO_PUBLISH") {
+    return (
+      Boolean(infoConfig) &&
+      typeof infoConfig?.channelId === "string" &&
+      Array.isArray(infoConfig?.blocks)
+    );
+  }
+
   return false;
 }
 
@@ -514,7 +543,8 @@ function isDashboardBotJobCompletedPayload(
     payload.ok === true &&
     payload.mode === "klarbot_job_completed" &&
     (payload.job?.jobType === "VERIFY_PUBLISH" ||
-      payload.job?.jobType === "JOIN_MESSAGE_PUBLISH") &&
+      payload.job?.jobType === "JOIN_MESSAGE_PUBLISH" ||
+      payload.job?.jobType === "INFO_PUBLISH") &&
     (payload.job.status === "success" || payload.job.status === "failed")
   );
 }

@@ -26,7 +26,6 @@ Benötigte Variablen:
 DISCORD_BOT_TOKEN=
 DISCORD_CLIENT_ID=
 DISCORD_GUILD_ID=
-DISCORD_ENABLE_GUILD_MEMBERS_INTENT=false
 KLARBOT_DASHBOARD_SYNC_ENABLED=false
 KLARAPPS_API_BASE_URL=
 KLARAPPS_BOT_API_SECRET=
@@ -39,7 +38,6 @@ KLARBOT_INTERNAL_API_PORT=4107
 - `DISCORD_BOT_TOKEN`: Bot-Token aus dem Discord Developer Portal.
 - `DISCORD_CLIENT_ID`: Application/Client-ID der Discord-App.
 - `DISCORD_GUILD_ID`: Optional. Server-ID eines Discord-Testservers, auf dem Commands zusaetzlich zur globalen Registrierung direkt registriert werden.
-- `DISCORD_ENABLE_GUILD_MEMBERS_INTENT`: Optionaler Schalter fuer Join-Welcome. Nur auf `true` setzen, wenn das Guild Members Intent auch im Discord Developer Portal aktiviert ist.
 - `KLARBOT_DASHBOARD_SYNC_ENABLED`: Optionaler Schalter fuer die spaetere Read-Only Dashboard-Sync-Foundation.
 - `KLARAPPS_API_BASE_URL`: Basis-URL der KlarApps Website, z. B. `https://deine-domain.de`.
 - `KLARAPPS_BOT_API_SECRET`: Server-to-server Secret fuer die interne KlarBot Website-API. Niemals oeffentlich machen.
@@ -227,7 +225,7 @@ Welcome Polish V1:
 - Nach Freischaltung wird auf `/roles-panel` und Interessenrollen hingewiesen.
 - Logs laufen ueber `[KlarBot] [WELCOME]`.
 
-Der Join-Welcome nutzt das Discord `GuildMembers` Intent. Setze `DISCORD_ENABLE_GUILD_MEMBERS_INTENT=true` und aktiviere das Intent im Discord Developer Portal, damit `guildMemberAdd` ausgelöst wird. Ohne diesen Schalter startet KlarBot stabil weiter, postet aber keine automatischen Join-Welcome-Nachrichten.
+Der Join-Welcome nutzt das Discord `GuildMembers` Intent. Das Intent ist im Bot-Code immer aktiv und muss im Discord Developer Portal ebenfalls aktiviert sein, damit `guildMemberAdd` ausgeloest wird.
 
 Permissions:
 

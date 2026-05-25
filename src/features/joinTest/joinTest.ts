@@ -12,6 +12,8 @@ import {
   type DashboardJoinTestConfig,
 } from "../dashboardSync/dashboardSyncClient.js";
 
+logger.info("[join-test] module file loaded");
+
 type ActiveJoinTestConfigResult =
   | {
       ok: true;
@@ -156,7 +158,7 @@ export async function sendJoinTestMessageForMember(
   config: BotConfig,
 ) {
   logger.info(
-    `[join-test] guildMemberAdd received | guildId=${member.guild.id} | memberId=${member.id}`,
+    `[join-test] handler started | guildId=${member.guild.id} | memberId=${member.id}`,
   );
 
   const activeConfig = await loadActiveJoinTestConfig(member.guild.id, config);

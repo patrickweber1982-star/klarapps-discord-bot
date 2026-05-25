@@ -2,6 +2,7 @@ import type { Client } from "discord.js";
 
 import type { BotConfig } from "../../config/env.js";
 import { logger } from "../../utils/logger.js";
+import { publishInfoConfigForGuild } from "../info/infoPublish.js";
 import { publishJoinMessageConfigForGuild } from "../joinMessage/joinMessage.js";
 import { publishVerifyPanelForGuild } from "../verify/verifyPanelSync.js";
 import { createDashboardSyncClient } from "./dashboardSyncClient.js";
@@ -81,6 +82,12 @@ async function processNextJob(client: Client, config: BotConfig) {
               job.guildId,
               job.payload.joinMessageConfig,
             )
+          : job.jobType === "INFO_PUBLISH" && job.payload.infoConfig
+            ? await publishInfoConfigForGuild(
+                client,
+                job.guildId,
+                job.payload.infoConfig,
+              )
           : {
               ok: false as const,
               reason: "unsupported_job_payload",
