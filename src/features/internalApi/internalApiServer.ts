@@ -266,14 +266,14 @@ export function startInternalApiServer(client: Client, config: BotConfig) {
 
   server.on("error", (error) => {
     logger.error(
-      `KlarBot interne API konnte nicht auf Port ${config.internalApi.port} starten`,
+      `KlarBot interne API konnte nicht auf ${config.internalApi.host}:${config.internalApi.port} starten`,
       error,
     );
   });
 
   server.listen(config.internalApi.port, config.internalApi.host, () => {
     logger.success(
-      `KlarBot interne API aktiv auf Port ${config.internalApi.port}`,
+      `KlarBot interne API aktiv auf ${config.internalApi.host}:${config.internalApi.port}`,
     );
   });
 
