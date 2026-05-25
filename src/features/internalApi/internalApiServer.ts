@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import type { Client } from "discord.js";
+import { ChannelType, PermissionFlagsBits, type Client } from "discord.js";
 
 import type { BotConfig } from "../../config/env.js";
 import { logger } from "../../utils/logger.js";
@@ -68,6 +68,77 @@ function authorize(request: IncomingMessage, config: BotConfig) {
   return readBearerToken(request) === expected;
 }
 
+function readRequestUrl(request: IncomingMessage) {
+  return new URL(request.url ?? "/", "http://127.0.0.1");
+}
+
+function isGuildChannelsRoute(pathname: string) {
+  const match = pathname.match(/^\/internal\/guilds\/(\d{8,32})\/channels$/);
+
+  return match?.[1] ?? null;
+}
+
+async function handleGuildChannels(
+  client: Client,
+  guildId: string,
+  response: ServerResponse,
+) {
+  const guild = await client.guilds.fetch(guildId).catch(() => null);
+
+  if (!guild) {
+    logger.warn(
+      `Interne Channel-Abfrage fehlgeschlagen | guild=${guildId} | Guild nicht gefunden`,
+    );
+    sendJson(response, 404, {
+      ok: false,
+      reason: "guild_not_found",
+      message: "Discord Guild nicht gefunden oder Bot nicht installiert.",
+    });
+    return;
+  }
+
+  const fetchedChannels = await guild.channels.fetch();
+  const channels = [];
+
+  for (const channel of fetchedChannels.values()) {
+    if (!channel) continue;
+
+    const isTextChannel =
+      channel.type === ChannelType.GuildText ||
+      channel.type === ChannelType.GuildAnnouncement;
+    const permissions = client.user ? channel.permissionsFor(client.user) : null;
+    const botCanSend =
+      !permissions ||
+      permissions.has([
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+      ]);
+
+    if (!isTextChannel || !botCanSend) continue;
+
+    channels.push({
+      channelId: channel.id,
+      name: channel.name,
+      type: String(channel.type),
+      textBased: true,
+      botCanSend: true,
+    });
+  }
+
+  channels.sort((left, right) => left.name.localeCompare(right.name, "de"));
+
+  logger.info(
+    `Interne Channel-Abfrage | guild=${guildId} | channels=${channels.length}`,
+  );
+
+  sendJson(response, 200, {
+    ok: true,
+    mode: "klarbot_guild_channels",
+    guildId,
+    channels,
+  });
+}
+
 export function startInternalApiServer(client: Client, config: BotConfig) {
   if (!config.internalApi.enabled) {
     logger.info("KlarBot interne API ist deaktiviert.");
@@ -91,7 +162,18 @@ export function startInternalApiServer(client: Client, config: BotConfig) {
       return;
     }
 
-    if (request.method !== "POST" || request.url !== "/internal/verify/publish") {
+    const requestUrl = readRequestUrl(request);
+    const channelGuildId = isGuildChannelsRoute(requestUrl.pathname);
+
+    if (request.method === "GET" && channelGuildId) {
+      await handleGuildChannels(client, channelGuildId, response);
+      return;
+    }
+
+    if (
+      request.method !== "POST" ||
+      requestUrl.pathname !== "/internal/verify/publish"
+    ) {
       sendJson(response, 404, {
         ok: false,
         reason: "not_found",
