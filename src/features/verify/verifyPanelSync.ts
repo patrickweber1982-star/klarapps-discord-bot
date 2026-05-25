@@ -1,6 +1,7 @@
 import {
   ActionRowBuilder,
   EmbedBuilder,
+  PermissionFlagsBits,
   type ButtonBuilder,
   type Client,
 } from "discord.js";
@@ -46,6 +47,17 @@ export async function sendVerifyPanelForGuild(
   }
 
   const verifyConfig = result.payload.verifyConfig;
+  const guild = await client.guilds.fetch(guildId).catch(() => null);
+
+  if (!guild) {
+    logger.warn(
+      `Verify-Panel wird nicht gesendet | guild=${guildId} | Guild nicht gefunden oder Bot nicht installiert`,
+    );
+    return {
+      ok: false,
+      reason: "guild_not_found",
+    };
+  }
 
   if (!verifyConfig.verifyChannelId) {
     logger.warn(
@@ -67,15 +79,48 @@ export async function sendVerifyPanelForGuild(
     };
   }
 
-  const channel = await client.channels.fetch(verifyConfig.verifyChannelId);
+  const channel = await client.channels
+    .fetch(verifyConfig.verifyChannelId)
+    .catch(() => null);
 
   if (!channel || !("send" in channel) || typeof channel.send !== "function") {
     logger.warn(
-      `Verify-Panel wird nicht gesendet | guild=${guildId} | Channel nicht sendbar`,
+      `Verify-Panel wird nicht gesendet | guild=${guildId} | Channel nicht gefunden oder nicht sendbar`,
     );
     return {
       ok: false,
-      reason: "channel_not_sendable",
+      reason: "channel_not_found",
+    };
+  }
+
+  if ("guildId" in channel && channel.guildId !== guildId) {
+    logger.warn(
+      `Verify-Panel wird nicht gesendet | guild=${guildId} | Channel gehoert zu anderer Guild`,
+    );
+    return {
+      ok: false,
+      reason: "channel_not_found",
+    };
+  }
+
+  const permissions =
+    "permissionsFor" in channel && client.user
+      ? channel.permissionsFor(client.user)
+      : null;
+
+  if (
+    permissions &&
+    !permissions.has([
+      PermissionFlagsBits.ViewChannel,
+      PermissionFlagsBits.SendMessages,
+    ])
+  ) {
+    logger.warn(
+      `Verify-Panel wird nicht gesendet | guild=${guildId} | fehlende Channel-Berechtigung`,
+    );
+    return {
+      ok: false,
+      reason: "missing_permissions",
     };
   }
 

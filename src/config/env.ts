@@ -12,9 +12,15 @@ export type BotConfig = {
     syncToken: string | null;
     timeoutMs: number;
   };
+  internalApi: {
+    enabled: boolean;
+    port: number;
+    secret: string | null;
+  };
 };
 
 export type DashboardSyncEnvironment = BotConfig["dashboardSync"];
+export type InternalApiEnvironment = BotConfig["internalApi"];
 
 const requiredEnvKeys = [
   "DISCORD_BOT_TOKEN",
@@ -49,6 +55,16 @@ export function readDashboardSyncEnvironment(): DashboardSyncEnvironment {
   };
 }
 
+export function readInternalApiEnvironment(): InternalApiEnvironment {
+  return {
+    enabled: process.env.KLARBOT_INTERNAL_API_ENABLED === "true",
+    port: Number(process.env.KLARBOT_INTERNAL_API_PORT ?? 4107),
+    secret:
+      readOptionalEnv("KLARBOT_INTERNAL_API_SECRET") ??
+      readOptionalEnv("KLARAPPS_BOT_API_SECRET"),
+  };
+}
+
 export function loadConfig(): BotConfig {
   return {
     discordBotToken: readRequiredEnv("DISCORD_BOT_TOKEN"),
@@ -57,5 +73,6 @@ export function loadConfig(): BotConfig {
     nodeEnv: process.env.NODE_ENV?.trim() || "development",
     debug: process.env.DEBUG === "true",
     dashboardSync: readDashboardSyncEnvironment(),
+    internalApi: readInternalApiEnvironment(),
   };
 }

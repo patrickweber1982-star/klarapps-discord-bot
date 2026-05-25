@@ -5,6 +5,7 @@ import { Client, GatewayIntentBits } from "discord.js";
 import { createCommandMap } from "./commands/index.js";
 import { loadConfig, readDashboardSyncEnvironment } from "./config/env.js";
 import { registerEvents } from "./events/index.js";
+import { startInternalApiServer } from "./features/internalApi/internalApiServer.js";
 import { registerGlobalErrorHandlers } from "./utils/errors.js";
 import { logger } from "./utils/logger.js";
 
@@ -34,6 +35,7 @@ const client = new Client({
   intents,
 });
 
+startInternalApiServer(client, config);
 registerEvents({ client, commands, config });
 
 logger.info(`KlarBot startet. Geladene Commands: ${Array.from(commands.keys()).join(", ")}`);
