@@ -2,7 +2,6 @@ import { type ButtonInteraction } from "discord.js";
 
 import type { BotConfig } from "../config/env.js";
 import { createDashboardSyncClient } from "../features/dashboardSync/dashboardSyncClient.js";
-import { readVerifyModuleState } from "../features/dashboardSync/verifyModuleState.js";
 import { verifyCommunityMember } from "../features/welcome/verifyFlow.js";
 import { buildWelcomeErrorEmbed } from "../features/welcome/welcomeEmbeds.js";
 
@@ -28,19 +27,6 @@ export async function handleVerifyButton(
     return true;
   }
 
-  const moduleState = await readVerifyModuleState(config, interaction.guild.id, {
-    bypassCache: true,
-  });
-
-  if (!moduleState.enabled) {
-    await interaction.reply({
-      content:
-        "Das Verify-Modul ist auf diesem Server derzeit deaktiviert.",
-      ephemeral: true,
-    });
-    return true;
-  }
-
   const syncClient = createDashboardSyncClient(config);
   const verifyConfigResult = await syncClient.readVerifyConfig(interaction.guild.id);
 
@@ -53,14 +39,25 @@ export async function handleVerifyButton(
     return true;
   }
 
+  const verifyConfig = verifyConfigResult.payload.verifyConfig;
+
+  if (!verifyConfig.enabled) {
+    await interaction.reply({
+      content:
+        "Das Verify-Modul ist auf diesem Server derzeit deaktiviert.",
+      ephemeral: true,
+    });
+    return true;
+  }
+
   const member = await interaction.guild.members.fetch(interaction.user.id);
-  const embed = await verifyCommunityMember(member, {
-    verifiedRoleId: verifyConfigResult.payload.verifyConfig.verifiedRoleId,
-    removeRoleId: verifyConfigResult.payload.verifyConfig.removeRoleId,
+  const result = await verifyCommunityMember(member, {
+    verifiedRoleId: verifyConfig.verifiedRoleId,
+    removeRoleId: verifyConfig.removeRoleId,
   });
 
   await interaction.reply({
-    embeds: [embed],
+    embeds: [result.embed],
     ephemeral: true,
   });
 

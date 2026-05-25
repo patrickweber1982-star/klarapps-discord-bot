@@ -126,6 +126,8 @@ export type DashboardVerifyConfigPayload = {
   guildId: string;
   verifyConfig: {
     guildId: string;
+    enabled: boolean;
+    status: string;
     verifyChannelId: string;
     channelDescription?: string;
     channelHint?: string;
@@ -314,6 +316,8 @@ function isDashboardVerifyConfigPayload(
     payload.mode === "klarbot_verify_config" &&
     typeof payload.guildId === "string" &&
     Boolean(config) &&
+    typeof config?.enabled === "boolean" &&
+    typeof config?.status === "string" &&
     typeof config?.verifyChannelId === "string" &&
     typeof config?.embedTitle === "string" &&
     typeof config?.embedDescription === "string" &&

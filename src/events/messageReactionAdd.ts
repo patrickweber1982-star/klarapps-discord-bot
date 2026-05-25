@@ -2,7 +2,6 @@ import { Events, type Client, type MessageReaction, type User } from "discord.js
 
 import type { BotConfig } from "../config/env.js";
 import { createDashboardSyncClient } from "../features/dashboardSync/dashboardSyncClient.js";
-import { readVerifyModuleState } from "../features/dashboardSync/verifyModuleState.js";
 import { verifyCommunityMember } from "../features/welcome/verifyFlow.js";
 import { logger } from "../utils/logger.js";
 
@@ -60,6 +59,13 @@ export function registerMessageReactionAddEvent(
 
       const verifyConfig = verifyConfigResult.payload.verifyConfig;
 
+      if (!verifyConfig.enabled) {
+        logger.warn(
+          `Verify-Reaktion ignoriert: Modul deaktiviert | guild=${guild.id}`,
+        );
+        return;
+      }
+
       if (
         verifyConfig.confirmationMode !== "emoji" ||
         verifyConfig.publishedMessageId !== fullReaction.message.id
@@ -73,23 +79,19 @@ export function registerMessageReactionAddEvent(
         return;
       }
 
-      const moduleState = await readVerifyModuleState(config, guild.id, {
-        bypassCache: true,
-      });
-
-      if (!moduleState.enabled) {
-        logger.warn(
-          `Verify-Reaktion ignoriert: Modul deaktiviert | guild=${guild.id}`,
-        );
-        return;
-      }
-
       const member = await guild.members.fetch(fullUser.id);
 
-      await verifyCommunityMember(member, {
+      const result = await verifyCommunityMember(member, {
         verifiedRoleId: verifyConfig.verifiedRoleId,
         removeRoleId: verifyConfig.removeRoleId,
       });
+
+      if (!result.ok) {
+        logger.warn(
+          `Verify per Emoji fehlgeschlagen | guild=${guild.id} | user=${fullUser.id} | reason=${result.message}`,
+        );
+        return;
+      }
 
       logger.success(
         `Verify per Emoji abgeschlossen | guild=${guild.id} | user=${fullUser.id}`,
