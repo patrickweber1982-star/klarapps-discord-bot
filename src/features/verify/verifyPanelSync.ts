@@ -51,6 +51,16 @@ function embedColor(value: string | undefined) {
   return colors[value?.trim() ?? ""] ?? colors["klarapps-teal"];
 }
 
+function embedImageUrl(value: string | undefined) {
+  const url = value?.trim();
+
+  if (!url || !/^https?:\/\//i.test(url)) {
+    return "";
+  }
+
+  return url;
+}
+
 function optionalBlock(title: string, value: string | undefined) {
   const text = value?.trim();
 
@@ -241,6 +251,12 @@ export async function publishVerifyPanelForGuild(
     .setColor(embedColor(verifyConfig.embedColor))
     .setFooter({ text: verifyConfig.embedFooter || "KlarBot Verify" })
     .setTimestamp();
+  const bannerImageUrl = embedImageUrl(verifyConfig.bannerImageUrl);
+
+  if (bannerImageUrl) {
+    embed.setImage(bannerImageUrl);
+  }
+
   const verifyButton = primaryButton(
     `${verifyButtonPrefix}:${guildId}`,
     verifyConfig.buttonLabel || "Verifizieren",
@@ -286,6 +302,29 @@ export async function publishVerifyPanelForGuild(
     logger.success(
       `Verify-Panel gesendet | guild=${guildId} | channel=${verifyConfig.verifyChannelId} | message=${messageId}`,
     );
+  }
+
+  if (verifyConfig.confirmationMode === "button" && "messages" in channel) {
+    const message = await channel.messages.fetch(messageId).catch(() => null);
+
+    if (message) {
+      const preciseButton = primaryButton(
+        `${verifyButtonPrefix}:${guildId}:${messageId}`,
+        verifyConfig.buttonLabel || "Verifizieren",
+      );
+      const emoji = configuredEmoji(verifyConfig.confirmationEmoji);
+
+      if (emoji) {
+        preciseButton.setEmoji(emoji);
+      }
+
+      await message.edit({
+        embeds: [embed],
+        components: [
+          new ActionRowBuilder<ButtonBuilder>().addComponents(preciseButton),
+        ],
+      });
+    }
   }
 
   if (verifyConfig.confirmationMode === "emoji" && "messages" in channel) {

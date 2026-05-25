@@ -134,6 +134,7 @@ export type DashboardVerifyConfigPayload = {
     publishedMessageId?: string;
     publishedAt?: string;
     embedColor?: string;
+    bannerImageUrl?: string;
     embedTitle: string;
     embedDescription: string;
     embedFooter: string;
@@ -421,8 +422,9 @@ export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClie
     path: string,
     guard: (value: unknown) => value is TPayload,
     fallbackMessage: string,
+    options: { requireEnabled?: boolean } = {},
   ): Promise<DashboardInternalReadResult<TPayload>> {
-    if (!dashboardSync.enabled) {
+    if (options.requireEnabled !== false && !dashboardSync.enabled) {
       return disabledResult("Dashboard-Sync ist deaktiviert.");
     }
 
@@ -575,6 +577,7 @@ export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClie
         `/api/bot/guilds/${encodeURIComponent(guildId)}/verify-config`,
         isDashboardVerifyConfigPayload,
         "Verify-Konfiguration konnte nicht geladen werden.",
+        { requireEnabled: false },
       );
     },
     async readGuildConfig(guildId: string): Promise<DashboardSyncReadResult> {

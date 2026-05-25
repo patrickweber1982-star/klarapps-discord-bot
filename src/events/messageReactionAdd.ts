@@ -52,16 +52,27 @@ export function registerMessageReactionAddEvent(
 
       if (!verifyConfigResult.ok) {
         logger.warn(
-          `Verify-Reaktion ignoriert: Config konnte nicht geladen werden | guild=${guild.id} | reason=${verifyConfigResult.message}`,
+          `Verify-Reaktion ignoriert: Config konnte nicht geladen werden | guild=${guild.id} | message=${fullReaction.message.id} | configFound=false | roleId=no | reason=${verifyConfigResult.message}`,
         );
         return;
       }
 
       const verifyConfig = verifyConfigResult.payload.verifyConfig;
 
+      logger.info(
+        `Verify-Reaktion: Config geladen | guild=${guild.id} | message=${fullReaction.message.id} | configFound=true | roleId=${verifyConfig.verifiedRoleId ? "yes" : "no"} | publishedMessage=${verifyConfig.publishedMessageId || "none"}`,
+      );
+
       if (!verifyConfig.enabled) {
         logger.warn(
           `Verify-Reaktion ignoriert: Modul deaktiviert | guild=${guild.id}`,
+        );
+        return;
+      }
+
+      if (!verifyConfig.verifiedRoleId) {
+        logger.warn(
+          `Verify-Reaktion ignoriert: keine Verify-Rolle gespeichert | guild=${guild.id} | message=${fullReaction.message.id}`,
         );
         return;
       }
