@@ -221,7 +221,7 @@ export async function sendJoinMessageForMember(
 
   if (!activeConfig.ok) {
     logger.info(
-      `Join Message uebersprungen | guild=${member.guild.id} | reason=${activeConfig.reason} | message=${activeConfig.message}`,
+      `Join Message uebersprungen | guild=${member.guild.id} | member=${member.id} | sent=false | reason=${activeConfig.reason} | message=${activeConfig.message}`,
     );
     return;
   }
@@ -240,7 +240,7 @@ export async function sendJoinMessageForMember(
 
   if (!channelResult.ok) {
     logger.warn(
-      `Join Message konnte nicht gesendet werden | guild=${member.guild.id} | channelId=${joinMessageConfig.joinChannelId || "missing"} | channelFound=${channelResult.channelFound ? "true" : "false"} | canSend=${channelResult.canSend ? "true" : "false"} | reason=${channelResult.reason}`,
+      `Join Message konnte nicht gesendet werden | guild=${member.guild.id} | member=${member.id} | channelId=${joinMessageConfig.joinChannelId || "missing"} | channelFound=${channelResult.channelFound ? "true" : "false"} | canSend=${channelResult.canSend ? "true" : "false"} | sent=false | reason=${channelResult.reason}`,
     );
     return;
   }
@@ -277,11 +277,11 @@ export async function sendJoinMessageForMember(
     }
 
     logger.welcome(
-      `Join Message gesendet | user=${member.user.tag} | guild=${member.guild.name}`,
+      `Join Message gesendet | guild=${member.guild.id} | member=${member.id} | channelId=${joinMessageConfig.joinChannelId} | sent=true`,
     );
   } catch (error) {
     logger.warn(
-      `Join Message Versand fehlgeschlagen | guild=${member.guild.id}`,
+      `Join Message Versand fehlgeschlagen | guild=${member.guild.id} | member=${member.id} | channelId=${joinMessageConfig.joinChannelId} | sent=false`,
       error,
     );
   }

@@ -20,6 +20,9 @@ export type DashboardSyncClient = {
   readJoinMessageConfig(
     guildId: string,
   ): Promise<DashboardInternalReadResult<DashboardJoinMessageConfigPayload>>;
+  readJoinTestConfig(
+    guildId: string,
+  ): Promise<DashboardInternalReadResult<DashboardJoinTestConfigPayload>>;
   readGuildConfig(guildId: string): Promise<DashboardSyncReadResult>;
   readGuildTrial(
     guildId: string,
@@ -177,6 +180,23 @@ export type DashboardJoinMessageConfigPayload = {
 
 export type DashboardJoinMessageConfig =
   DashboardJoinMessageConfigPayload["joinMessageConfig"];
+
+export type DashboardJoinTestConfigPayload = {
+  ok: true;
+  mode: "klarbot_join_test_config";
+  guildId: string;
+  joinTestConfig: {
+    guildId: string;
+    enabled: boolean;
+    status: string;
+    channelId: string;
+    message: string;
+    updatedAt: string;
+  };
+};
+
+export type DashboardJoinTestConfig =
+  DashboardJoinTestConfigPayload["joinTestConfig"];
 
 type DashboardBotJob = {
   id: string;
@@ -380,6 +400,28 @@ function isDashboardJoinMessageConfigPayload(
     typeof config?.embedTitle === "string" &&
     typeof config?.embedColor === "string" &&
     typeof config?.embedFooter === "string"
+  );
+}
+
+function isDashboardJoinTestConfigPayload(
+  value: unknown,
+): value is DashboardJoinTestConfigPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Partial<DashboardJoinTestConfigPayload>;
+  const config = payload.joinTestConfig;
+
+  return (
+    payload.ok === true &&
+    payload.mode === "klarbot_join_test_config" &&
+    typeof payload.guildId === "string" &&
+    Boolean(config) &&
+    typeof config?.enabled === "boolean" &&
+    typeof config?.status === "string" &&
+    typeof config?.channelId === "string" &&
+    typeof config?.message === "string"
   );
 }
 
@@ -659,6 +701,14 @@ export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClie
         `/api/bot/guilds/${encodeURIComponent(guildId)}/join-message-config`,
         isDashboardJoinMessageConfigPayload,
         "Join-Message-Konfiguration konnte nicht geladen werden.",
+        { requireEnabled: false },
+      );
+    },
+    async readJoinTestConfig(guildId: string) {
+      return readInternal(
+        `/api/bot/guilds/${encodeURIComponent(guildId)}/join-test-config`,
+        isDashboardJoinTestConfigPayload,
+        "Join-Test-Konfiguration konnte nicht geladen werden.",
         { requireEnabled: false },
       );
     },
