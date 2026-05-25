@@ -38,6 +38,16 @@ export type DashboardSyncClient = {
   reportGuildSnapshot(input: DashboardGuildSnapshotInput): Promise<
     DashboardInternalReadResult<DashboardGuildSnapshotPayload>
   >;
+  claimNextVerifyPublishJob(): Promise<
+    DashboardInternalReadResult<DashboardBotJobClaimPayload>
+  >;
+  completeBotJob(input: {
+    jobId: string;
+    status: "success" | "failed";
+    messageId?: string | null;
+    errorMessage?: string | null;
+    result?: Record<string, unknown>;
+  }): Promise<DashboardInternalReadResult<DashboardBotJobCompletedPayload>>;
 };
 
 type DashboardInternalReadResult<TPayload> =
@@ -117,15 +127,59 @@ export type DashboardVerifyConfigPayload = {
   verifyConfig: {
     guildId: string;
     verifyChannelId: string;
+    channelDescription?: string;
+    channelHint?: string;
+    publishedMessageId?: string;
+    publishedAt?: string;
     embedTitle: string;
     embedDescription: string;
     embedFooter: string;
     confirmationMode: "button" | "emoji";
     confirmationEmoji: string;
+    confirmationHint?: string;
     buttonLabel: string;
     verifiedRoleId: string;
     removeRoleId: string;
+    roleHint?: string;
     updatedAt: string;
+  };
+};
+
+export type DashboardVerifyConfig =
+  DashboardVerifyConfigPayload["verifyConfig"];
+
+type DashboardBotJob = {
+  id: string;
+  jobType: "VERIFY_PUBLISH";
+  status: "processing";
+  guildId: string;
+  moduleSlug: string | null;
+  configId: string | null;
+  channelId: string | null;
+  messageId: string | null;
+  payload: {
+    verifyConfig: DashboardVerifyConfig;
+    guildName?: string;
+  };
+  attempts: number;
+};
+
+type DashboardBotJobClaimPayload = {
+  ok: true;
+  mode: "klarbot_job_claim";
+  job: DashboardBotJob | null;
+};
+
+type DashboardBotJobCompletedPayload = {
+  ok: true;
+  mode: "klarbot_job_completed";
+  job: {
+    id: string;
+    jobType: "VERIFY_PUBLISH";
+    status: "success" | "failed";
+    guildId: string;
+    messageId: string | null;
+    errorMessage: string | null;
   };
 };
 
@@ -284,6 +338,62 @@ function isDashboardGuildSnapshotPayload(
     typeof payload.guildId === "string" &&
     typeof payload.synced?.channels === "number" &&
     typeof payload.synced?.roles === "number"
+  );
+}
+
+function isDashboardBotJobClaimPayload(
+  value: unknown,
+): value is DashboardBotJobClaimPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Partial<DashboardBotJobClaimPayload>;
+  const job = payload.job as Partial<DashboardBotJob> | null | undefined;
+
+  if (
+    payload.ok !== true ||
+    payload.mode !== "klarbot_job_claim" ||
+    job === undefined
+  ) {
+    return false;
+  }
+
+  if (job === null) {
+    return true;
+  }
+
+  const verifyConfig = job.payload?.verifyConfig;
+
+  return (
+    job.jobType === "VERIFY_PUBLISH" &&
+    job.status === "processing" &&
+    typeof job.id === "string" &&
+    typeof job.guildId === "string" &&
+    Boolean(verifyConfig) &&
+    typeof verifyConfig?.verifyChannelId === "string" &&
+    typeof verifyConfig?.embedTitle === "string" &&
+    typeof verifyConfig?.embedDescription === "string" &&
+    (verifyConfig?.confirmationMode === "button" ||
+      verifyConfig?.confirmationMode === "emoji") &&
+    typeof verifyConfig?.verifiedRoleId === "string"
+  );
+}
+
+function isDashboardBotJobCompletedPayload(
+  value: unknown,
+): value is DashboardBotJobCompletedPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Partial<DashboardBotJobCompletedPayload>;
+
+  return (
+    payload.ok === true &&
+    payload.mode === "klarbot_job_completed" &&
+    payload.job?.jobType === "VERIFY_PUBLISH" &&
+    (payload.job.status === "success" || payload.job.status === "failed")
   );
 }
 
@@ -520,6 +630,29 @@ export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClie
         },
         isDashboardGuildSnapshotPayload,
         "Dashboard-Sync konnte den Guild-Snapshot nicht speichern.",
+      );
+    },
+    async claimNextVerifyPublishJob() {
+      return postInternal(
+        "/api/bot/jobs/claim",
+        {
+          jobType: "VERIFY_PUBLISH",
+        },
+        isDashboardBotJobClaimPayload,
+        "Dashboard-Sync konnte keinen Verify-Publish-Job abrufen.",
+      );
+    },
+    async completeBotJob(input) {
+      return postInternal(
+        `/api/bot/jobs/${encodeURIComponent(input.jobId)}/complete`,
+        {
+          status: input.status,
+          messageId: input.messageId ?? null,
+          errorMessage: input.errorMessage ?? null,
+          result: input.result ?? {},
+        },
+        isDashboardBotJobCompletedPayload,
+        "Dashboard-Sync konnte den Bot-Job Status nicht speichern.",
       );
     },
   };

@@ -7,7 +7,10 @@ import {
 } from "discord.js";
 
 import type { BotConfig } from "../../config/env.js";
-import { createDashboardSyncClient } from "../dashboardSync/dashboardSyncClient.js";
+import {
+  createDashboardSyncClient,
+  type DashboardVerifyConfig,
+} from "../dashboardSync/dashboardSyncClient.js";
 import { verifyButtonId } from "../../interactions/verifyButton.js";
 import { primaryButton } from "../../utils/components.js";
 import { logger } from "../../utils/logger.js";
@@ -41,12 +44,27 @@ export async function sendVerifyPanelForGuild(
       `Verify-Panel kann nicht gesendet werden | guild=${guildId} | reason=${result.message}`,
     );
     return {
-      ok: false,
+      ok: false as const,
       reason: result.message,
     };
   }
 
   const verifyConfig = result.payload.verifyConfig;
+
+  return publishVerifyPanelForGuild(
+    client,
+    guildId,
+    verifyConfig,
+    verifyConfig.publishedMessageId || null,
+  );
+}
+
+export async function publishVerifyPanelForGuild(
+  client: Client,
+  guildId: string,
+  verifyConfig: DashboardVerifyConfig,
+  existingMessageId: string | null = null,
+) {
   const guild = await client.guilds.fetch(guildId).catch(() => null);
 
   if (!guild) {
@@ -54,7 +72,7 @@ export async function sendVerifyPanelForGuild(
       `Verify-Panel wird nicht gesendet | guild=${guildId} | Guild nicht gefunden oder Bot nicht installiert`,
     );
     return {
-      ok: false,
+      ok: false as const,
       reason: "guild_not_found",
     };
   }
@@ -64,8 +82,28 @@ export async function sendVerifyPanelForGuild(
       `Verify-Panel wird nicht gesendet | guild=${guildId} | kein Verify-Channel ausgewaehlt`,
     );
     return {
-      ok: false,
+      ok: false as const,
       reason: "no_channel_selected",
+    };
+  }
+
+  if (!verifyConfig.verifiedRoleId) {
+    logger.warn(
+      `Verify-Panel wird nicht gesendet | guild=${guildId} | keine Verify-Rolle ausgewaehlt`,
+    );
+    return {
+      ok: false as const,
+      reason: "missing_verified_role",
+    };
+  }
+
+  if (verifyConfig.confirmationMode === "emoji") {
+    logger.warn(
+      `Verify-Panel wird nicht gesendet | guild=${guildId} | Emoji-Modus ist noch vorbereitet`,
+    );
+    return {
+      ok: false as const,
+      reason: "emoji_mode_not_ready",
     };
   }
 
@@ -74,7 +112,7 @@ export async function sendVerifyPanelForGuild(
       `Verify-Panel wird nicht gesendet | guild=${guildId} | Verify-Channel ist noch kein echter Discord Channel ID`,
     );
     return {
-      ok: false,
+      ok: false as const,
       reason: "invalid_channel_id",
     };
   }
@@ -88,7 +126,7 @@ export async function sendVerifyPanelForGuild(
       `Verify-Panel wird nicht gesendet | guild=${guildId} | Channel nicht gefunden oder nicht sendbar`,
     );
     return {
-      ok: false,
+      ok: false as const,
       reason: "channel_not_found",
     };
   }
@@ -98,7 +136,7 @@ export async function sendVerifyPanelForGuild(
       `Verify-Panel wird nicht gesendet | guild=${guildId} | Channel gehoert zu anderer Guild`,
     );
     return {
-      ok: false,
+      ok: false as const,
       reason: "channel_not_found",
     };
   }
@@ -119,7 +157,7 @@ export async function sendVerifyPanelForGuild(
       `Verify-Panel wird nicht gesendet | guild=${guildId} | fehlende Channel-Berechtigung`,
     );
     return {
-      ok: false,
+      ok: false as const,
       reason: "missing_permissions",
     };
   }
@@ -154,17 +192,38 @@ export async function sendVerifyPanelForGuild(
         ]
       : [];
 
-  await channel.send({
+  let messageId: string | null = null;
+  const panelPayload = {
     embeds: [embed],
     components,
-  });
+  };
 
-  logger.success(
-    `Verify-Panel gesendet | guild=${guildId} | channel=${verifyConfig.verifyChannelId}`,
-  );
+  if (existingMessageId && "messages" in channel) {
+    const existingMessage = await channel.messages
+      .fetch(existingMessageId)
+      .catch(() => null);
+
+    if (existingMessage) {
+      const updatedMessage = await existingMessage.edit(panelPayload);
+      messageId = updatedMessage.id;
+      logger.success(
+        `Verify-Panel aktualisiert | guild=${guildId} | channel=${verifyConfig.verifyChannelId} | message=${messageId}`,
+      );
+    }
+  }
+
+  if (!messageId) {
+    const sentMessage = await channel.send(panelPayload);
+    messageId = sentMessage.id;
+    logger.success(
+      `Verify-Panel gesendet | guild=${guildId} | channel=${verifyConfig.verifyChannelId} | message=${messageId}`,
+    );
+  }
+
 
   return {
-    ok: true,
+    ok: true as const,
     channelId: verifyConfig.verifyChannelId,
+    messageId,
   };
 }

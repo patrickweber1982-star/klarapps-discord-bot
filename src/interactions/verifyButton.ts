@@ -1,6 +1,7 @@
 import { type ButtonInteraction } from "discord.js";
 
 import type { BotConfig } from "../config/env.js";
+import { createDashboardSyncClient } from "../features/dashboardSync/dashboardSyncClient.js";
 import { readVerifyModuleState } from "../features/dashboardSync/verifyModuleState.js";
 import { verifyCommunityMember } from "../features/welcome/verifyFlow.js";
 import { buildWelcomeErrorEmbed } from "../features/welcome/welcomeEmbeds.js";
@@ -34,8 +35,23 @@ export async function handleVerifyButton(
     return true;
   }
 
+  const syncClient = createDashboardSyncClient(config);
+  const verifyConfigResult = await syncClient.readVerifyConfig(interaction.guild.id);
+
+  if (!verifyConfigResult.ok) {
+    await interaction.reply({
+      content:
+        "Die Verify-Konfiguration konnte gerade nicht geladen werden. Bitte versuche es spaeter erneut.",
+      ephemeral: true,
+    });
+    return true;
+  }
+
   const member = await interaction.guild.members.fetch(interaction.user.id);
-  const embed = await verifyCommunityMember(member);
+  const embed = await verifyCommunityMember(member, {
+    verifiedRoleId: verifyConfigResult.payload.verifyConfig.verifiedRoleId,
+    removeRoleId: verifyConfigResult.payload.verifyConfig.removeRoleId,
+  });
 
   await interaction.reply({
     embeds: [embed],
