@@ -5,6 +5,7 @@ import type { BotCommand } from "../types/command.js";
 import { registerGuildLifecycleEvents } from "./guildLifecycle.js";
 import { registerGuildMemberAddEvent } from "./guildMemberAdd.js";
 import { registerInteractionCreateEvent } from "./interactionCreate.js";
+import { registerMessageReactionAddEvent } from "./messageReactionAdd.js";
 import { registerReadyEvent } from "./ready.js";
 
 type RegisterEventsOptions = {
@@ -20,6 +21,7 @@ export function registerEvents(options: RegisterEventsOptions) {
     config: options.config,
   });
   registerInteractionCreateEvent(options);
+  registerMessageReactionAddEvent(options.client, options.config);
   registerGuildMemberAddEvent(options.client);
   registerGuildLifecycleEvents(options.client, options.config, options.commands);
 }

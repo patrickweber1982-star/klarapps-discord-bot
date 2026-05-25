@@ -77,6 +77,9 @@ async function readLiveModuleState(
   config: BotConfig,
   guildId: string,
   moduleSlug: LiveModuleSlug,
+  options: {
+    bypassCache?: boolean;
+  } = {},
 ): Promise<LiveModuleStateResult> {
   const client = createDashboardSyncClient(config);
   const label = moduleLabel(moduleSlug);
@@ -91,7 +94,9 @@ async function readLiveModuleState(
   const result = await client.readGuildModules(guildId);
 
   if (!result.ok) {
-    const cached = readFreshCache(guildId, moduleSlug);
+    const cached = options.bypassCache
+      ? null
+      : readFreshCache(guildId, moduleSlug);
 
     if (cached) {
       return cached;
@@ -125,8 +130,11 @@ async function readLiveModuleState(
 export async function readVerifyModuleState(
   config: BotConfig,
   guildId: string,
+  options: {
+    bypassCache?: boolean;
+  } = {},
 ) {
-  return readLiveModuleState(config, guildId, verifyModuleSlug);
+  return readLiveModuleState(config, guildId, verifyModuleSlug, options);
 }
 
 export async function readTicketModuleState(

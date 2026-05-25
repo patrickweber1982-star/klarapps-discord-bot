@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import { Client, GatewayIntentBits } from "discord.js";
+import { Client, GatewayIntentBits, Partials } from "discord.js";
 
 import { createCommandMap } from "./commands/index.js";
 import { loadConfig, readDashboardSyncEnvironment } from "./config/env.js";
@@ -13,7 +13,10 @@ registerGlobalErrorHandlers();
 
 const config = loadConfig();
 const commands = createCommandMap();
-const intents = [GatewayIntentBits.Guilds];
+const intents = [
+  GatewayIntentBits.Guilds,
+  GatewayIntentBits.GuildMessageReactions,
+];
 const dashboardSyncEnvironment = readDashboardSyncEnvironment();
 
 logger.info(
@@ -36,6 +39,7 @@ if (process.env.DISCORD_ENABLE_GUILD_MEMBERS_INTENT === "true") {
 
 const client = new Client({
   intents,
+  partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.User],
 });
 
 startInternalApiServer(client, config);

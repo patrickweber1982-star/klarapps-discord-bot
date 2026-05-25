@@ -11,7 +11,7 @@ import {
   createDashboardSyncClient,
   type DashboardVerifyConfig,
 } from "../dashboardSync/dashboardSyncClient.js";
-import { verifyButtonId } from "../../interactions/verifyButton.js";
+import { verifyButtonPrefix } from "../../interactions/verifyButton.js";
 import { primaryButton } from "../../utils/components.js";
 import { logger } from "../../utils/logger.js";
 
@@ -35,6 +35,20 @@ function configuredEmoji(value: string | undefined) {
   };
 
   return knownEmojis[normalized] ?? normalized;
+}
+
+function embedColor(value: string | undefined) {
+  const colors: Record<string, number> = {
+    "klarapps-teal": 0x14b8a6,
+    blue: 0x3b82f6,
+    purple: 0xa855f7,
+    green: 0x22c55e,
+    yellow: 0xeab308,
+    red: 0xef4444,
+    gray: 0x64748b,
+  };
+
+  return colors[value?.trim() ?? ""] ?? colors["klarapps-teal"];
 }
 
 function optionalBlock(title: string, value: string | undefined) {
@@ -166,16 +180,6 @@ export async function publishVerifyPanelForGuild(
     };
   }
 
-  if (verifyConfig.confirmationMode === "emoji") {
-    logger.warn(
-      `Verify-Panel wird nicht gesendet | guild=${guildId} | Emoji-Modus ist noch vorbereitet`,
-    );
-    return {
-      ok: false as const,
-      reason: "emoji_mode_not_ready",
-    };
-  }
-
   if (!isDiscordSnowflake(verifyConfig.verifyChannelId)) {
     logger.warn(
       `Verify-Panel wird nicht gesendet | guild=${guildId} | Verify-Channel ist noch kein echter Discord Channel ID`,
@@ -234,11 +238,11 @@ export async function publishVerifyPanelForGuild(
   const embed = new EmbedBuilder()
     .setTitle(verifyConfig.embedTitle || "Verify")
     .setDescription(buildVerifyDescription(verifyConfig))
-    .setColor(0x14b8a6)
+    .setColor(embedColor(verifyConfig.embedColor))
     .setFooter({ text: verifyConfig.embedFooter || "KlarBot Verify" })
     .setTimestamp();
   const verifyButton = primaryButton(
-    verifyButtonId,
+    `${verifyButtonPrefix}:${guildId}`,
     verifyConfig.buttonLabel || "Verifizieren",
   );
   const emoji = configuredEmoji(verifyConfig.confirmationEmoji);
@@ -284,6 +288,19 @@ export async function publishVerifyPanelForGuild(
     );
   }
 
+  if (verifyConfig.confirmationMode === "emoji" && "messages" in channel) {
+    const emoji = configuredEmoji(verifyConfig.confirmationEmoji) || "✅";
+    const message = await channel.messages.fetch(messageId).catch(() => null);
+
+    if (message) {
+      await message.react(emoji).catch((error) => {
+        logger.warn(
+          `Verify-Emoji konnte nicht gesetzt werden | guild=${guildId} | message=${messageId}`,
+          error,
+        );
+      });
+    }
+  }
 
   return {
     ok: true as const,

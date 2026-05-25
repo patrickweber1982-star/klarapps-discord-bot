@@ -7,12 +7,16 @@ import { verifyCommunityMember } from "../features/welcome/verifyFlow.js";
 import { buildWelcomeErrorEmbed } from "../features/welcome/welcomeEmbeds.js";
 
 export const verifyButtonId = "verify:community";
+export const verifyButtonPrefix = "verify:confirm";
 
 export async function handleVerifyButton(
   interaction: ButtonInteraction,
   config: BotConfig,
 ) {
-  if (interaction.customId !== verifyButtonId) {
+  if (
+    interaction.customId !== verifyButtonId &&
+    !interaction.customId.startsWith(`${verifyButtonPrefix}:`)
+  ) {
     return false;
   }
 
@@ -24,7 +28,9 @@ export async function handleVerifyButton(
     return true;
   }
 
-  const moduleState = await readVerifyModuleState(config, interaction.guild.id);
+  const moduleState = await readVerifyModuleState(config, interaction.guild.id, {
+    bypassCache: true,
+  });
 
   if (!moduleState.enabled) {
     await interaction.reply({

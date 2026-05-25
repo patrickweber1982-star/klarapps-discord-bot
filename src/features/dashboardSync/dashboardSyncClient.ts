@@ -131,6 +131,7 @@ export type DashboardVerifyConfigPayload = {
     channelHint?: string;
     publishedMessageId?: string;
     publishedAt?: string;
+    embedColor?: string;
     embedTitle: string;
     embedDescription: string;
     embedFooter: string;
