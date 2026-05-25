@@ -14,6 +14,7 @@ export type BotConfig = {
   };
   internalApi: {
     enabled: boolean;
+    host: string;
     port: number;
     secret: string | null;
   };
@@ -46,6 +47,24 @@ function readRequiredEnv(key: (typeof requiredEnvKeys)[number]) {
   return value;
 }
 
+function readOptionalBooleanEnv(key: string) {
+  const value = readOptionalEnv(key)?.toLowerCase();
+
+  if (!value) {
+    return null;
+  }
+
+  if (["1", "true", "yes", "on"].includes(value)) {
+    return true;
+  }
+
+  if (["0", "false", "no", "off"].includes(value)) {
+    return false;
+  }
+
+  return null;
+}
+
 export function readDashboardSyncEnvironment(): DashboardSyncEnvironment {
   return {
     enabled: process.env.KLARBOT_DASHBOARD_SYNC_ENABLED === "true",
@@ -59,10 +78,11 @@ export function readInternalApiEnvironment(): InternalApiEnvironment {
   const secret =
     readOptionalEnv("KLARBOT_INTERNAL_API_SECRET") ??
     readOptionalEnv("KLARAPPS_BOT_API_SECRET");
-  const enabledFlag = readOptionalEnv("KLARBOT_INTERNAL_API_ENABLED");
+  const enabledFlag = readOptionalBooleanEnv("KLARBOT_INTERNAL_API_ENABLED");
 
   return {
-    enabled: enabledFlag ? enabledFlag === "true" : Boolean(secret),
+    enabled: enabledFlag ?? Boolean(secret),
+    host: readOptionalEnv("KLARBOT_INTERNAL_API_HOST") ?? "127.0.0.1",
     port: Number(process.env.KLARBOT_INTERNAL_API_PORT ?? 4107),
     secret,
   };

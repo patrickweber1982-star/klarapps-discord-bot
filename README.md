@@ -32,6 +32,7 @@ KLARAPPS_API_BASE_URL=
 KLARAPPS_BOT_API_SECRET=
 KLARBOT_SYNC_TIMEOUT_MS=5000
 KLARBOT_INTERNAL_API_ENABLED=true
+KLARBOT_INTERNAL_API_HOST=127.0.0.1
 KLARBOT_INTERNAL_API_PORT=4107
 ```
 
@@ -44,6 +45,7 @@ KLARBOT_INTERNAL_API_PORT=4107
 - `KLARAPPS_BOT_API_SECRET`: Server-to-server Secret fuer die interne KlarBot Website-API. Niemals oeffentlich machen.
 - `KLARBOT_SYNC_TIMEOUT_MS`: Timeout fuer spaetere Config-Reads vom Dashboard.
 - `KLARBOT_INTERNAL_API_ENABLED`: Schalter fuer die lokale interne KlarBot API. Ohne gesetzten Wert startet sie automatisch, sobald `KLARAPPS_BOT_API_SECRET` vorhanden ist. Mit `false` bleibt sie bewusst deaktiviert.
+- `KLARBOT_INTERNAL_API_HOST`: Host fuer die interne KlarBot API. Standard ist `127.0.0.1`, damit die API nur lokal auf dem Server erreichbar ist.
 - `KLARBOT_INTERNAL_API_PORT`: Lokaler Port fuer die interne KlarBot API. Standard ist `4107`.
 
 `.env` bleibt ignoriert und darf nicht committed werden.

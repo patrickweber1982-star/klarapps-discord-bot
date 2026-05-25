@@ -153,7 +153,7 @@ async function handleGuildChannels(
 
 export function startInternalApiServer(client: Client, config: BotConfig) {
   if (!config.internalApi.enabled) {
-    logger.info("KlarBot interne API ist deaktiviert.");
+    logger.info("KlarBot interne API deaktiviert.");
     return null;
   }
 
@@ -233,9 +233,16 @@ export function startInternalApiServer(client: Client, config: BotConfig) {
     }
   });
 
-  server.listen(config.internalApi.port, "127.0.0.1", () => {
+  server.on("error", (error) => {
+    logger.error(
+      `KlarBot interne API konnte nicht auf Port ${config.internalApi.port} starten`,
+      error,
+    );
+  });
+
+  server.listen(config.internalApi.port, config.internalApi.host, () => {
     logger.success(
-      `KlarBot interne API aktiv auf 127.0.0.1:${config.internalApi.port}`,
+      `KlarBot interne API aktiv auf Port ${config.internalApi.port}`,
     );
   });
 

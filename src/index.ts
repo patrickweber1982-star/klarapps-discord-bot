@@ -22,6 +22,9 @@ logger.info(
 logger.info(
   `Dashboard sync secret configured: ${dashboardSyncEnvironment.syncToken ? "yes" : "no"}`,
 );
+logger.info(
+  `KlarBot interne API konfiguriert: ${config.internalApi.enabled ? "aktiv" : "deaktiviert"} | host=${config.internalApi.host} | port=${config.internalApi.port} | secret=${config.internalApi.secret ? "yes" : "no"}`,
+);
 
 if (process.env.DISCORD_ENABLE_GUILD_MEMBERS_INTENT === "true") {
   intents.push(GatewayIntentBits.GuildMembers);
