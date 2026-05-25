@@ -35,6 +35,9 @@ export type DashboardSyncClient = {
       guildName: string;
     }>;
   }): Promise<DashboardInternalReadResult<DashboardInstallationSnapshotPayload>>;
+  reportGuildSnapshot(input: DashboardGuildSnapshotInput): Promise<
+    DashboardInternalReadResult<DashboardGuildSnapshotPayload>
+  >;
 };
 
 type DashboardInternalReadResult<TPayload> =
@@ -69,6 +72,41 @@ type DashboardInstallationSnapshotPayload = {
     installedGuildCount: number;
     removedGuildCount: number;
     lastSyncedAt: string | Date | null;
+  };
+};
+
+type DashboardGuildSnapshotInput = {
+  guildId: string;
+  name: string;
+  iconUrl: string | null;
+  botInstalled: boolean;
+  channels: Array<{
+    id: string;
+    name: string;
+    type: string;
+    parentId: string | null;
+    position: number | null;
+    botCanView: boolean;
+    botCanSend: boolean;
+  }>;
+  roles: Array<{
+    id: string;
+    name: string;
+    color: string | null;
+    position: number | null;
+    managed: boolean;
+    botCanAssign: boolean;
+  }>;
+};
+
+type DashboardGuildSnapshotPayload = {
+  ok: true;
+  mode: "klarbot_guild_snapshot";
+  guildId: string;
+  synced: {
+    channels: number;
+    roles: number;
+    lastSyncedAt: string | Date;
   };
 };
 
@@ -228,6 +266,24 @@ function isDashboardVerifyConfigPayload(
     (config?.confirmationMode === "button" ||
       config?.confirmationMode === "emoji") &&
     typeof config?.buttonLabel === "string"
+  );
+}
+
+function isDashboardGuildSnapshotPayload(
+  value: unknown,
+): value is DashboardGuildSnapshotPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Partial<DashboardGuildSnapshotPayload>;
+
+  return (
+    payload.ok === true &&
+    payload.mode === "klarbot_guild_snapshot" &&
+    typeof payload.guildId === "string" &&
+    typeof payload.synced?.channels === "number" &&
+    typeof payload.synced?.roles === "number"
   );
 }
 
@@ -449,6 +505,21 @@ export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClie
         },
         isDashboardInstallationSnapshotPayload,
         "Dashboard-Sync konnte den Bot-Installationssnapshot nicht melden.",
+      );
+    },
+    async reportGuildSnapshot(input) {
+      return postInternal(
+        "/api/bot/sync/guild-snapshot",
+        {
+          guildId: input.guildId,
+          name: input.name,
+          iconUrl: input.iconUrl,
+          botInstalled: input.botInstalled,
+          channels: input.channels,
+          roles: input.roles,
+        },
+        isDashboardGuildSnapshotPayload,
+        "Dashboard-Sync konnte den Guild-Snapshot nicht speichern.",
       );
     },
   };

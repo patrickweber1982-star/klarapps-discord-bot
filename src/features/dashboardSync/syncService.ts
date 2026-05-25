@@ -1,4 +1,4 @@
-import type { Guild } from "discord.js";
+import { ChannelType, PermissionFlagsBits, type Guild } from "discord.js";
 
 import type { BotConfig } from "../../config/env.js";
 import { logger } from "../../utils/logger.js";
@@ -45,6 +45,102 @@ export function buildGuildSyncSnapshot(
     shouldPrepareLeave: trialDecision.shouldPrepareLeave,
     shouldLeaveNow: false,
   };
+}
+
+async function buildDiscordResourceSnapshot(guild: Guild) {
+  const [channels, roles] = await Promise.all([
+    guild.channels.fetch(),
+    guild.roles.fetch(),
+  ]);
+  const botMember = guild.members.me;
+  const botHighestRolePosition = botMember?.roles.highest.position ?? 0;
+  const channelSnapshots: Array<{
+    id: string;
+    name: string;
+    type: string;
+    parentId: string | null;
+    position: number | null;
+    botCanView: boolean;
+    botCanSend: boolean;
+  }> = [];
+
+  for (const channel of channels.values()) {
+    if (!channel) continue;
+
+    const isTextChannel =
+      channel.type === ChannelType.GuildText ||
+      channel.type === ChannelType.GuildAnnouncement;
+
+    if (!isTextChannel) continue;
+
+    const permissions = botMember ? channel.permissionsFor(botMember) : null;
+
+    channelSnapshots.push({
+      id: channel.id,
+      name: channel.name,
+      type: String(channel.type),
+      parentId: channel.parentId ?? null,
+      position: channel.position ?? null,
+      botCanView: Boolean(permissions?.has(PermissionFlagsBits.ViewChannel)),
+      botCanSend: Boolean(permissions?.has(PermissionFlagsBits.SendMessages)),
+    });
+  }
+
+  return {
+    guildId: guild.id,
+    name: guild.name,
+    iconUrl: guild.iconURL({ size: 128 }),
+    botInstalled: true,
+    channels: channelSnapshots,
+    roles: roles
+      .filter((role) => role.id !== guild.id)
+      .map((role) => ({
+        id: role.id,
+        name: role.name,
+        color: role.hexColor,
+        position: role.position ?? null,
+        managed: role.managed,
+        botCanAssign:
+          !role.managed &&
+          role.position < botHighestRolePosition &&
+          role.id !== guild.id,
+      })),
+  };
+}
+
+export async function reportDashboardGuildSnapshot(
+  guild: Guild,
+  config: BotConfig,
+) {
+  const client = createDashboardSyncClient(config);
+
+  if (!client.installationReportingEnabled) {
+    logger.debug(
+      `Dashboard-Sync Guild-Snapshot fuer Guild ${guild.id} uebersprungen: API-URL oder API-Secret fehlt.`,
+    );
+    return;
+  }
+
+  try {
+    const snapshot = await buildDiscordResourceSnapshot(guild);
+    const result = await client.reportGuildSnapshot(snapshot);
+
+    if (!result.ok) {
+      logger.warn(
+        `Dashboard-Sync Guild-Snapshot fehlgeschlagen | guild=${guild.id} | reason=${result.message}`,
+      );
+      return;
+    }
+
+    logger.info(
+      `Dashboard-Sync Guild-Snapshot gespeichert | guild=${guild.name} | channels=${result.payload.synced.channels} | roles=${result.payload.synced.roles}`,
+    );
+  } catch (error) {
+    logger.warn(
+      `Dashboard-Sync Guild-Snapshot konnte nicht erstellt werden | guild=${guild.id}`,
+      error,
+    );
+  }
 }
 
 export async function prepareDashboardSyncForGuild(
@@ -138,6 +234,10 @@ export async function prepareDashboardSyncForGuilds(
   }
 
   for (const guild of guildList) {
+    void reportDashboardGuildSnapshot(guild, config);
+  }
+
+  for (const guild of guildList) {
     const snapshot = await prepareDashboardSyncForGuild(guild, config, {
       reportInstallation: false,
     });
@@ -186,4 +286,8 @@ export async function reportDashboardInstallationStatus(
   logger.info(
     `Dashboard-Sync ${installed ? "Guild-Installation" : "Guild-Entfernung"} gemeldet | guild=${guild.name} | installed=${installed}`,
   );
+
+  if (installed) {
+    void reportDashboardGuildSnapshot(guild, config);
+  }
 }
