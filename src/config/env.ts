@@ -35,6 +35,34 @@ function readOptionalEnv(key: string) {
   return trimmed && trimmed.length > 0 ? trimmed : null;
 }
 
+function stripWrappingQuotes(value: string) {
+  const trimmed = value.trim();
+  const first = trimmed.at(0);
+  const last = trimmed.at(-1);
+
+  if (
+    trimmed.length >= 2 &&
+    ((first === '"' && last === '"') || (first === "'" && last === "'"))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+
+  return trimmed;
+}
+
+function readOptionalSecretEnv(key: string) {
+  const value = readOptionalEnv(key);
+
+  if (!value) {
+    return null;
+  }
+
+  const withoutBearer = value.replace(/^Bearer\s+/i, "").trim();
+  const normalized = stripWrappingQuotes(withoutBearer);
+
+  return normalized.length > 0 ? normalized : null;
+}
+
 function readRequiredEnv(key: (typeof requiredEnvKeys)[number]) {
   const value = readOptionalEnv(key);
 
@@ -69,15 +97,15 @@ export function readDashboardSyncEnvironment(): DashboardSyncEnvironment {
   return {
     enabled: process.env.KLARBOT_DASHBOARD_SYNC_ENABLED === "true",
     apiBaseUrl: readOptionalEnv("KLARAPPS_API_BASE_URL"),
-    syncToken: readOptionalEnv("KLARAPPS_BOT_API_SECRET"),
+    syncToken: readOptionalSecretEnv("KLARAPPS_BOT_API_SECRET"),
     timeoutMs: Number(process.env.KLARBOT_SYNC_TIMEOUT_MS ?? 5000),
   };
 }
 
 export function readInternalApiEnvironment(): InternalApiEnvironment {
   const secret =
-    readOptionalEnv("KLARAPPS_BOT_API_SECRET") ??
-    readOptionalEnv("KLARBOT_INTERNAL_API_SECRET");
+    readOptionalSecretEnv("KLARAPPS_BOT_API_SECRET") ??
+    readOptionalSecretEnv("KLARBOT_INTERNAL_API_SECRET");
   const enabledFlag = readOptionalBooleanEnv("KLARBOT_INTERNAL_API_ENABLED");
 
   return {

@@ -52,7 +52,11 @@ async function buildDiscordResourceSnapshot(guild: Guild) {
     guild.channels.fetch(),
     guild.roles.fetch(),
   ]);
-  const botMember = guild.members.me;
+  const botMember =
+    guild.members.me ??
+    (guild.client.user
+      ? await guild.members.fetch(guild.client.user.id).catch(() => null)
+      : null);
   const botHighestRolePosition = botMember?.roles.highest.position ?? 0;
   const channelSnapshots: Array<{
     id: string;
@@ -63,6 +67,13 @@ async function buildDiscordResourceSnapshot(guild: Guild) {
     botCanView: boolean;
     botCanSend: boolean;
   }> = [];
+
+  logger.info(
+    `Sync guild started | guild=${guild.name} | id=${guild.id}`,
+  );
+  logger.info(
+    `Sync bot member resolved | guild=${guild.id} | resolved=${botMember ? "yes" : "no"}`,
+  );
 
   for (const channel of channels.values()) {
     if (!channel) continue;
@@ -86,25 +97,41 @@ async function buildDiscordResourceSnapshot(guild: Guild) {
     });
   }
 
+  const roleSnapshots = roles
+    .filter((role) => role.id !== guild.id)
+    .map((role) => ({
+      id: role.id,
+      name: role.name,
+      color: role.hexColor,
+      position: role.position ?? null,
+      managed: role.managed,
+      botCanAssign:
+        Boolean(botMember) &&
+        !role.managed &&
+        role.position < botHighestRolePosition &&
+        role.id !== guild.id,
+    }));
+  const sendableChannelCount = channelSnapshots.filter(
+    (channel) => channel.botCanView && channel.botCanSend,
+  ).length;
+  const assignableRoleCount = roleSnapshots.filter(
+    (role) => role.botCanAssign,
+  ).length;
+
+  logger.info(
+    `Sync channels count: ${channelSnapshots.length} | sendable=${sendableChannelCount} | guild=${guild.id}`,
+  );
+  logger.info(
+    `Sync roles count: ${roleSnapshots.length} | assignable=${assignableRoleCount} | guild=${guild.id}`,
+  );
+
   return {
     guildId: guild.id,
     name: guild.name,
     iconUrl: guild.iconURL({ size: 128 }),
     botInstalled: true,
     channels: channelSnapshots,
-    roles: roles
-      .filter((role) => role.id !== guild.id)
-      .map((role) => ({
-        id: role.id,
-        name: role.name,
-        color: role.hexColor,
-        position: role.position ?? null,
-        managed: role.managed,
-        botCanAssign:
-          !role.managed &&
-          role.position < botHighestRolePosition &&
-          role.id !== guild.id,
-      })),
+    roles: roleSnapshots,
   };
 }
 
