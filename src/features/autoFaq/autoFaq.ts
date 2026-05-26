@@ -1,4 +1,11 @@
-import { Events, type Client, type GuildMember, type Message } from "discord.js";
+import {
+  EmbedBuilder,
+  Events,
+  PermissionFlagsBits,
+  type Client,
+  type GuildMember,
+  type Message,
+} from "discord.js";
 
 import type { BotConfig } from "../../config/env.js";
 import { logger } from "../../utils/logger.js";
@@ -21,6 +28,20 @@ function readNumber(value: string, fallback: number) {
   const number = Number(value);
 
   return Number.isFinite(number) ? number : fallback;
+}
+
+function embedColor(value: string | undefined) {
+  const colors: Record<string, number> = {
+    "klarapps-teal": 0x14b8a6,
+    blue: 0x3b82f6,
+    purple: 0x8b5cf6,
+    green: 0x22c55e,
+    yellow: 0xeab308,
+    red: 0xef4444,
+    gray: 0x94a3b8,
+  };
+
+  return colors[value?.trim() ?? ""] ?? colors["klarapps-teal"];
 }
 
 async function loadAutoFaqConfig(guildId: string, config: BotConfig) {
@@ -95,21 +116,146 @@ function isOnCooldown(
   return false;
 }
 
+function usesEmbed(rule: DashboardAutoFaqRuleConfig) {
+  return rule.answerMode === "embed" || rule.answerMode === "embed_image";
+}
+
+function usesImage(rule: DashboardAutoFaqRuleConfig) {
+  return rule.answerMode === "image" || rule.answerMode === "embed_image";
+}
+
+function buildEmbed(rule: DashboardAutoFaqRuleConfig) {
+  const description = rule.embedDescription.trim() || rule.answerText.trim();
+  const embed = new EmbedBuilder()
+    .setColor(embedColor(rule.embedColor))
+    .setTitle((rule.embedTitle.trim() || rule.name).slice(0, 256));
+
+  if (description) {
+    embed.setDescription(description.slice(0, 4096));
+  }
+
+  if (rule.embedFooter.trim()) {
+    embed.setFooter({ text: rule.embedFooter.trim().slice(0, 2048) });
+  }
+
+  if (rule.embedThumbnailUrl.trim()) {
+    embed.setThumbnail(rule.embedThumbnailUrl.trim());
+  }
+
+  if (rule.embedImageUrl.trim()) {
+    embed.setImage(rule.embedImageUrl.trim());
+  }
+
+  return embed;
+}
+
+function attachmentUrl(rule: DashboardAutoFaqRuleConfig) {
+  if (rule.answerMode === "image") {
+    return rule.imageUrl.trim();
+  }
+
+  if (rule.answerMode === "embed_image" && !rule.embedImageUrl.trim()) {
+    return rule.imageUrl.trim();
+  }
+
+  return "";
+}
+
+function hasSendableAnswer(rule: DashboardAutoFaqRuleConfig) {
+  if (usesEmbed(rule)) {
+    return Boolean(
+      rule.embedTitle.trim() ||
+        rule.embedDescription.trim() ||
+        rule.answerText.trim() ||
+        rule.embedImageUrl.trim() ||
+        rule.imageUrl.trim(),
+    );
+  }
+
+  if (rule.answerMode === "image") {
+    return Boolean(rule.imageUrl.trim());
+  }
+
+  return Boolean(rule.answerText.trim());
+}
+
+async function scheduleBotReplyDelete(
+  sentMessage: Message | null,
+  rule: DashboardAutoFaqRuleConfig,
+) {
+  const delaySeconds = Math.max(
+    0,
+    readNumber(rule.deleteBotReplyAfterSeconds, 0),
+  );
+
+  if (!sentMessage || delaySeconds <= 0) return;
+
+  setTimeout(() => {
+    void sentMessage.delete().catch((error) => {
+      logger.warn(
+        `[auto-faq] bot reply delete failed | messageId=${sentMessage.id} | error=${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
+  }, delaySeconds * 1000).unref?.();
+}
+
+async function deleteOriginalMessage(message: Message, rule: DashboardAutoFaqRuleConfig) {
+  if (!rule.deleteUserMessage) return;
+
+  try {
+    const botMember = await message.guild?.members.fetchMe().catch(() => null);
+
+    if (!botMember?.permissionsIn(message.channelId).has(PermissionFlagsBits.ManageMessages)) {
+      logger.warn(
+        `[auto-faq] user message delete skipped | guildId=${message.guildId} | channelId=${message.channelId} | reason=missing_manage_messages`,
+      );
+      return;
+    }
+
+    if (message.deletable) {
+      await message.delete();
+      logger.info(
+        `[auto-faq] user message deleted | guildId=${message.guildId} | channelId=${message.channelId} | rule=${rule.id}`,
+      );
+    }
+  } catch (error) {
+    logger.warn(
+      `[auto-faq] user message delete failed | guildId=${message.guildId} | channelId=${message.channelId} | rule=${rule.id} | error=${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 async function sendAutoFaqReply(
   message: Message,
   rule: DashboardAutoFaqRuleConfig,
 ) {
-  if (!rule.answerText.trim()) return false;
+  if (!hasSendableAnswer(rule)) return null;
 
-  await message.reply({
-    content: rule.answerText.slice(0, 2000),
+  const payload = {
+    content:
+      !usesEmbed(rule) && rule.answerMode !== "image"
+        ? rule.answerText.slice(0, 2000)
+        : undefined,
+    embeds: usesEmbed(rule) ? [buildEmbed(rule)] : undefined,
+    files: attachmentUrl(rule) ? [attachmentUrl(rule)] : undefined,
     allowedMentions: {
       repliedUser: false,
       parse: [],
     },
-  });
+  };
 
-  return true;
+  if (rule.dmResponse) {
+    const dmMessage = await message.author.send(payload).catch((error) => {
+      logger.warn(
+        `[auto-faq] dm failed | guildId=${message.guildId} | userId=${message.author.id} | rule=${rule.id} | error=${error instanceof Error ? error.message : String(error)}`,
+      );
+      return null;
+    });
+
+    return dmMessage;
+  }
+
+  return message.reply(payload);
 }
 
 export async function publishAutoFaqConfigForGuild(
@@ -131,7 +277,7 @@ export async function publishAutoFaqConfigForGuild(
     (rule) =>
       rule.enabled &&
       rule.triggers.some((trigger) => trigger.trim()) &&
-      rule.answerText.trim(),
+      hasSendableAnswer(rule),
   );
 
   if (publishableRules.length === 0) {
@@ -179,10 +325,12 @@ export function registerAutoFaqMessageCreateEvent(
       }
 
       try {
-        const sent = await sendAutoFaqReply(message, rule);
+        const sentMessage = await sendAutoFaqReply(message, rule);
+        await scheduleBotReplyDelete(sentMessage, rule);
+        await deleteOriginalMessage(message, rule);
 
         logger.info(
-          `[auto-faq] reply ${sent ? "sent" : "skipped"} | guildId=${message.guildId} | channelId=${message.channelId} | rule=${rule.id}`,
+          `[auto-faq] reply ${sentMessage ? "sent" : "skipped"} | guildId=${message.guildId} | channelId=${message.channelId} | rule=${rule.id} | mode=${rule.answerMode} | dm=${rule.dmResponse ? "true" : "false"}`,
         );
       } catch (error) {
         logger.warn(
