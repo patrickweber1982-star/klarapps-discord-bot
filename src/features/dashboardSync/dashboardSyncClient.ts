@@ -201,6 +201,8 @@ export type DashboardInfoConfig = {
 export type DashboardServerProfileConfig = {
   guildId?: string;
   nickname: string;
+  avatarImageUrl?: string;
+  bannerImageUrl?: string;
   enabled?: boolean;
   lastAppliedAt?: string;
 };
@@ -507,7 +509,11 @@ function isDashboardBotJobClaimPayload(
   if (job.jobType === "SERVER_PROFILE_APPLY") {
     return (
       Boolean(serverProfileConfig) &&
-      typeof serverProfileConfig?.nickname === "string"
+      typeof serverProfileConfig?.nickname === "string" &&
+      (serverProfileConfig.avatarImageUrl === undefined ||
+        typeof serverProfileConfig.avatarImageUrl === "string") &&
+      (serverProfileConfig.bannerImageUrl === undefined ||
+        typeof serverProfileConfig.bannerImageUrl === "string")
     );
   }
 
