@@ -2,6 +2,7 @@ import type { Client } from "discord.js";
 
 import type { BotConfig } from "../../config/env.js";
 import { logger } from "../../utils/logger.js";
+import { publishAutoDeleteConfigForGuild } from "../autoDelete/autoDelete.js";
 import { publishInfoConfigForGuild } from "../info/infoPublish.js";
 import { publishJoinMessageConfigForGuild } from "../joinMessage/joinMessage.js";
 import { applyServerProfileForGuild } from "../serverProfile/serverProfile.js";
@@ -147,6 +148,12 @@ async function processNextJob(client: Client, config: BotConfig) {
                 client,
                 job.guildId,
                 job.payload.youtubeTestSubscription,
+              )
+          : job.jobType === "AUTO_DELETE_PUBLISH" && job.payload.autoDeleteConfig
+            ? await publishAutoDeleteConfigForGuild(
+                client,
+                job.guildId,
+                job.payload.autoDeleteConfig,
               )
           : {
               ok: false as const,

@@ -51,6 +51,7 @@ const guildMembersIntentSource =
 const intentEntries = [
   { name: "Guilds", value: GatewayIntentBits.Guilds },
   { name: "GuildMessages", value: GatewayIntentBits.GuildMessages },
+  { name: "MessageContent", value: GatewayIntentBits.MessageContent },
   { name: "GuildMessageReactions", value: GatewayIntentBits.GuildMessageReactions },
   ...(guildMembersIntentEnabled
     ? [{ name: "GuildMembers", value: GatewayIntentBits.GuildMembers }]

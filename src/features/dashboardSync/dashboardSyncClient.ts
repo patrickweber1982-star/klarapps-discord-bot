@@ -23,6 +23,9 @@ export type DashboardSyncClient = {
   readTicketConfig(
     guildId: string,
   ): Promise<DashboardInternalReadResult<DashboardTicketConfigPayload>>;
+  readAutoDeleteConfig(
+    guildId: string,
+  ): Promise<DashboardInternalReadResult<DashboardAutoDeleteConfigPayload>>;
   readYoutubeNotificationsConfig(
     guildId: string,
   ): Promise<DashboardInternalReadResult<DashboardYoutubeNotificationsConfigPayload>>;
@@ -361,6 +364,51 @@ export type DashboardYoutubeNotificationsConfigPayload = {
 export type DashboardYoutubeNotificationsConfig =
   DashboardYoutubeNotificationsConfigPayload["youtubeNotificationsConfig"];
 
+export type DashboardAutoDeleteRuleType =
+  | "links"
+  | "discord_invites"
+  | "words"
+  | "caps_spam"
+  | "emoji_spam"
+  | "delete_after_seconds"
+  | "media_only";
+
+export type DashboardAutoDeleteRuleConfig = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  type: DashboardAutoDeleteRuleType;
+  targetChannelIds: string[];
+  targetCategoryIds: string[];
+  deleteDelaySeconds: string;
+  warnUser: boolean;
+  logAction: boolean;
+  bannedWords: string;
+  capsThreshold: string;
+  emojiThreshold: string;
+};
+
+export type DashboardAutoDeleteConfigPayload = {
+  ok: true;
+  mode: "klarbot_auto_delete_config";
+  guildId: string;
+  autoDeleteConfig: {
+    guildId: string;
+    enabled: boolean;
+    status: string;
+    publishedAt: string;
+    logChannelId: string;
+    ignoredRoleIds: string[];
+    ignoreBots: boolean;
+    ignoreAdmins: boolean;
+    rules: DashboardAutoDeleteRuleConfig[];
+    updatedAt: string;
+  };
+};
+
+export type DashboardAutoDeleteConfig =
+  DashboardAutoDeleteConfigPayload["autoDeleteConfig"];
+
 type DashboardBotJob = {
   id: string;
   jobType:
@@ -374,7 +422,8 @@ type DashboardBotJob = {
     | "ROLE_STRUCTURE_APPLY"
     | "ROLE_STRUCTURE_DELETE"
     | "YOUTUBE_NOTIFICATIONS_PUBLISH"
-    | "YOUTUBE_NOTIFICATION_TEST";
+    | "YOUTUBE_NOTIFICATION_TEST"
+    | "AUTO_DELETE_PUBLISH";
   status: "processing";
   guildId: string;
   moduleSlug: string | null;
@@ -391,6 +440,7 @@ type DashboardBotJob = {
     roleStructureConfig?: DashboardRoleStructureConfig;
     youtubeNotificationsConfig?: DashboardYoutubeNotificationsConfig;
     youtubeTestSubscription?: DashboardYoutubeSubscriptionConfig;
+    autoDeleteConfig?: DashboardAutoDeleteConfig;
     guildName?: string;
   };
   attempts: number;
@@ -418,7 +468,8 @@ type DashboardBotJobCompletedPayload = {
       | "ROLE_STRUCTURE_APPLY"
       | "ROLE_STRUCTURE_DELETE"
       | "YOUTUBE_NOTIFICATIONS_PUBLISH"
-      | "YOUTUBE_NOTIFICATION_TEST";
+      | "YOUTUBE_NOTIFICATION_TEST"
+      | "AUTO_DELETE_PUBLISH";
     status: "success" | "failed";
     guildId: string;
     messageId: string | null;
@@ -648,6 +699,31 @@ function isDashboardYoutubeNotificationsConfigPayload(
   );
 }
 
+function isDashboardAutoDeleteConfigPayload(
+  value: unknown,
+): value is DashboardAutoDeleteConfigPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Partial<DashboardAutoDeleteConfigPayload>;
+  const config = payload.autoDeleteConfig;
+
+  return (
+    payload.ok === true &&
+    payload.mode === "klarbot_auto_delete_config" &&
+    typeof payload.guildId === "string" &&
+    Boolean(config) &&
+    typeof config?.enabled === "boolean" &&
+    typeof config?.status === "string" &&
+    typeof config?.logChannelId === "string" &&
+    Array.isArray(config?.ignoredRoleIds) &&
+    typeof config?.ignoreBots === "boolean" &&
+    typeof config?.ignoreAdmins === "boolean" &&
+    Array.isArray(config?.rules)
+  );
+}
+
 function isDashboardGuildSnapshotPayload(
   value: unknown,
 ): value is DashboardGuildSnapshotPayload {
@@ -717,6 +793,7 @@ function isDashboardBotJobClaimPayload(
   const roleStructureConfig = job.payload?.roleStructureConfig;
   const youtubeNotificationsConfig = job.payload?.youtubeNotificationsConfig;
   const youtubeTestSubscription = job.payload?.youtubeTestSubscription;
+  const autoDeleteConfig = job.payload?.autoDeleteConfig;
 
   if (
     job.status !== "processing" ||
@@ -821,6 +898,10 @@ function isDashboardBotJobClaimPayload(
     );
   }
 
+  if (job.jobType === "AUTO_DELETE_PUBLISH") {
+    return Boolean(autoDeleteConfig) && Array.isArray(autoDeleteConfig?.rules);
+  }
+
   return false;
 }
 
@@ -846,7 +927,8 @@ function isDashboardBotJobCompletedPayload(
       payload.job?.jobType === "ROLE_STRUCTURE_APPLY" ||
       payload.job?.jobType === "ROLE_STRUCTURE_DELETE" ||
       payload.job?.jobType === "YOUTUBE_NOTIFICATIONS_PUBLISH" ||
-      payload.job?.jobType === "YOUTUBE_NOTIFICATION_TEST") &&
+      payload.job?.jobType === "YOUTUBE_NOTIFICATION_TEST" ||
+      payload.job?.jobType === "AUTO_DELETE_PUBLISH") &&
     (payload.job.status === "success" || payload.job.status === "failed")
   );
 }
@@ -1041,6 +1123,14 @@ export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClie
         `/api/bot/guilds/${encodeURIComponent(guildId)}/ticket-config`,
         isDashboardTicketConfigPayload,
         "Ticket-Konfiguration konnte nicht geladen werden.",
+        { requireEnabled: false },
+      );
+    },
+    async readAutoDeleteConfig(guildId: string) {
+      return readInternal(
+        `/api/bot/guilds/${encodeURIComponent(guildId)}/auto-delete-config`,
+        isDashboardAutoDeleteConfigPayload,
+        "Auto-Loeschen-Konfiguration konnte nicht geladen werden.",
         { requireEnabled: false },
       );
     },
