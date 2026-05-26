@@ -1,68 +1,203 @@
-import { ActionRowBuilder, type ButtonBuilder, type ButtonInteraction, ChannelType } from "discord.js";
+import {
+  ActionRowBuilder,
+  ChannelType,
+  EmbedBuilder,
+  PermissionFlagsBits,
+  PermissionsBitField,
+  type ButtonBuilder,
+  type ButtonInteraction,
+  type GuildMember,
+  type TextChannel,
+} from "discord.js";
 
 import type { BotConfig } from "../config/env.js";
-import { ticketButtonIds, ticketTypes, type TicketType } from "../config/tickets.js";
-import { readTicketModuleState } from "../features/dashboardSync/verifyModuleState.js";
 import {
-  logTicketClosedEvent,
-  logTicketCreatedEvent,
-  logTicketErrorEvent,
-} from "../features/tickets/ticketLogService.js";
-import { buildTicketTranscript } from "../features/tickets/transcripts/transcriptBuilder.js";
-import { uploadTicketTranscript } from "../features/tickets/transcripts/transcriptUploader.js";
+  ticketCloseConfirmButtonId,
+  ticketCloseRequestButtonId,
+  ticketPanelButtonId,
+  ticketPanelButtonPrefix,
+  ticketTopicPrefix,
+} from "../features/tickets/ticketPanel.js";
+import {
+  createDashboardSyncClient,
+  type DashboardTicketConfig,
+  type DashboardTicketTypeConfig,
+} from "../features/dashboardSync/dashboardSyncClient.js";
 import { dangerButton, secondaryButton } from "../utils/components.js";
-import { infoEmbed, successEmbed } from "../utils/embeds.js";
-import {
-  canManageTicket,
-  createTicketChannel,
-  findOpenTicketChannel,
-} from "../utils/tickets.js";
 import { logger } from "../utils/logger.js";
+
+type ActiveTicketConfigResult =
+  | {
+      ok: true;
+      config: DashboardTicketConfig;
+    }
+  | {
+      ok: false;
+      reason: string;
+      message: string;
+    };
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function embedColor(value: string | undefined) {
+  const colors: Record<string, number> = {
+    "klarapps-teal": 0x14b8a6,
+    blue: 0x3b82f6,
+    purple: 0xa855f7,
+    green: 0x22c55e,
+    yellow: 0xeab308,
+    red: 0xef4444,
+    gray: 0x64748b,
+  };
+
+  return colors[value?.trim() ?? ""] ?? colors["klarapps-teal"];
+}
+
+function ticketTopic(userId: string, ticketTypeId: string | null) {
+  return ticketTypeId
+    ? `${ticketTopicPrefix}:dashboard:${ticketTypeId}:${userId}`
+    : `${ticketTopicPrefix}:dashboard:${userId}`;
+}
+
+function ticketSlug(value: string) {
+  const normalized = (
+    value || "ticket"
+  )
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}-]+/gu, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+
+  return normalized || "ticket";
+}
+
+function ticketChannelName(member: GuildMember, ticketType: DashboardTicketTypeConfig) {
+  const username = ticketSlug(
+    member.user.globalName ||
+      member.displayName ||
+      member.user.username ||
+      member.id,
+  );
+  const prefix = ticketSlug(ticketType.name || ticketType.id);
+
+  return `${prefix}-${username}`.slice(0, 90);
+}
+
+function resolveTicketType(
+  ticketConfig: DashboardTicketConfig,
+  ticketTypeId: string | null,
+): DashboardTicketTypeConfig | null {
+  if (ticketTypeId) {
+    return (
+      ticketConfig.ticketTypes.find((ticketType) => ticketType.id === ticketTypeId) ??
+      null
+    );
+  }
+
+  return (
+    ticketConfig.ticketTypes[0] ?? {
+      id: "legacy",
+      name: ticketConfig.buttonLabel || "Ticket",
+      description:
+        ticketConfig.panelDescription ||
+        "Bitte beschreibe dein Anliegen so klar wie moeglich.",
+      emoji: "🎫",
+      ticketCategoryId: ticketConfig.ticketCategoryId,
+      supportRoleId: ticketConfig.supportRoleId,
+      embedColor: ticketConfig.embedColor,
+    }
+  );
+}
+
+async function loadActiveTicketConfig(
+  guildId: string,
+  config: BotConfig,
+): Promise<ActiveTicketConfigResult> {
+  const syncClient = createDashboardSyncClient(config);
+  const result = await syncClient.readTicketConfig(guildId);
+
+  if (!result.ok) {
+    logger.warn(
+      `[tickets] config load failed | guildId=${guildId} | reason=${result.message}`,
+    );
+    return {
+      ok: false,
+      reason: result.status === 404 ? "config_not_found" : "sync_error",
+      message: result.message,
+    };
+  }
+
+  const ticketConfig = result.payload.ticketConfig;
+
+  logger.info(
+    `[tickets] Ticket Config geladen | guildId=${guildId} | enabled=${ticketConfig.enabled} | panelChannel=${ticketConfig.panelChannelId || "missing"} | ticketTypes=${ticketConfig.ticketTypes.length}`,
+  );
+
+  if (!ticketConfig.enabled) {
+    return {
+      ok: false,
+      reason: "config_disabled",
+      message: "Das Ticketsystem ist fuer diesen Server deaktiviert.",
+    };
+  }
+
+  if (
+    ticketConfig.ticketTypes.length === 0 ||
+    ticketConfig.ticketTypes.some(
+      (ticketType) => !ticketType.ticketCategoryId || !ticketType.supportRoleId,
+    )
+  ) {
+    return {
+      ok: false,
+      reason: "config_incomplete",
+      message: "Die Ticket-Konfiguration ist noch unvollstaendig.",
+    };
+  }
+
+  return {
+    ok: true,
+    config: ticketConfig,
+  };
+}
 
 export async function handleTicketButton(
   interaction: ButtonInteraction,
   config: BotConfig,
 ) {
-  if (interaction.customId === ticketButtonIds.claim) {
-    if (interaction.guild) {
-      const moduleState = await readTicketModuleState(config, interaction.guild.id);
-
-      if (!moduleState.enabled) {
-        await interaction.reply({
-          content:
-            "Das Ticketsystem ist fuer diesen Server aktuell im KlarApps Dashboard deaktiviert.",
-          ephemeral: true,
-        });
-        return true;
-      }
-    }
-
-    await interaction.reply({
-      content: "Feature folgt bald.",
-      ephemeral: true,
-    });
+  if (interaction.customId === ticketPanelButtonId) {
+    await openTicket(interaction, config, null);
     return true;
   }
 
-  if (interaction.customId === ticketButtonIds.close) {
-    await closeTicket(interaction);
+  if (interaction.customId.startsWith(ticketPanelButtonPrefix)) {
+    await openTicket(
+      interaction,
+      config,
+      interaction.customId.slice(ticketPanelButtonPrefix.length),
+    );
     return true;
   }
 
-  const ticketType = getTicketTypeFromButton(interaction.customId);
-
-  if (!ticketType) {
-    return false;
+  if (interaction.customId === ticketCloseRequestButtonId) {
+    await requestTicketClose(interaction);
+    return true;
   }
 
-  await openTicket(interaction, ticketType, config);
-  return true;
+  if (interaction.customId === ticketCloseConfirmButtonId) {
+    await confirmTicketClose(interaction);
+    return true;
+  }
+
+  return false;
 }
 
 async function openTicket(
   interaction: ButtonInteraction,
-  ticketType: TicketType,
   config: BotConfig,
+  ticketTypeId: string | null,
 ) {
   if (!interaction.guild) {
     await interaction.reply({
@@ -72,84 +207,173 @@ async function openTicket(
     return;
   }
 
-  const moduleState = await readTicketModuleState(config, interaction.guild.id);
+  logger.info(
+    `[tickets] Ticket create attempt | guildId=${interaction.guild.id} | userId=${interaction.user.id} | ticketType=${ticketTypeId || "legacy"}`,
+  );
 
-  if (!moduleState.enabled) {
-    await interaction.reply({
-      content:
-        "Das Ticketsystem ist fuer diesen Server aktuell im KlarApps Dashboard deaktiviert.",
-      ephemeral: true,
+  await interaction.deferReply({ ephemeral: true });
+
+  const configResult = await loadActiveTicketConfig(interaction.guild.id, config);
+
+  if (!configResult.ok) {
+    await interaction.editReply({
+      content: configResult.message,
     });
     return;
   }
 
-  await interaction.deferReply({ ephemeral: true });
-
   try {
-    const definition = ticketTypes[ticketType];
+    const ticketConfig = configResult.config;
+    const ticketType = resolveTicketType(ticketConfig, ticketTypeId);
+
+    if (!ticketType) {
+      await interaction.editReply({
+        content: "Dieser Ticket-Typ wurde nicht gefunden. Bitte veroeffentliche das Panel neu.",
+      });
+      logger.warn(
+        `[tickets] create failed | guildId=${interaction.guild.id} | reason=ticket_type_not_found | ticketType=${ticketTypeId || "legacy"}`,
+      );
+      return;
+    }
+
+    const botMember = await interaction.guild.members.fetchMe();
+
+    if (!botMember.permissions.has(PermissionFlagsBits.ManageChannels)) {
+      await interaction.editReply({
+        content: "KlarBot fehlt die Berechtigung, Channels zu verwalten.",
+      });
+      logger.warn(
+        `[tickets] create failed | guildId=${interaction.guild.id} | reason=missing_manage_channels_permission`,
+      );
+      return;
+    }
+
     const member = await interaction.guild.members.fetch(interaction.user.id);
     await interaction.guild.channels.fetch();
+    const currentTicketTopic = ticketTopic(interaction.user.id, ticketType.id);
+    const legacyTicketTopic = ticketTopic(interaction.user.id, null);
+    const existing = interaction.guild.channels.cache.find(
+      (channel): channel is TextChannel =>
+        channel.type === ChannelType.GuildText &&
+        (channel.topic === currentTicketTopic ||
+          (!ticketTypeId && channel.topic === legacyTicketTopic)),
+    );
 
-    const existingTicket = findOpenTicketChannel(interaction.guild, ticketType, interaction.user.id);
-
-    if (existingTicket) {
+    if (existing) {
       await interaction.editReply({
-        content: `Du hast bereits ein offenes ${definition.label}-Ticket: ${existingTicket}. Bitte nutze zuerst dieses Ticket weiter.`,
+        content: `Du hast bereits ein offenes Ticket: ${existing}`,
       });
       return;
     }
 
-    const ticketChannel = await createTicketChannel(interaction.guild, member, definition);
-    logger.success(`Ticket erstellt: ${ticketChannel.name} (${definition.type}) fuer ${interaction.user.tag}`);
+    const category = await interaction.guild.channels
+      .fetch(ticketType.ticketCategoryId)
+      .catch(() => null);
+
+    if (!category || category.type !== ChannelType.GuildCategory) {
+      await interaction.editReply({
+        content: "Die konfigurierte Ticket-Kategorie wurde nicht gefunden.",
+      });
+      logger.warn(
+        `[tickets] create failed | guildId=${interaction.guild.id} | reason=category_not_found | ticketType=${ticketType.id} | categoryId=${ticketType.ticketCategoryId}`,
+      );
+      return;
+    }
+
+    const supportRole = await interaction.guild.roles
+      .fetch(ticketType.supportRoleId)
+      .catch(() => null);
+
+    if (!supportRole) {
+      await interaction.editReply({
+        content: "Die konfigurierte Support-Rolle wurde nicht gefunden.",
+      });
+      logger.warn(
+        `[tickets] create failed | guildId=${interaction.guild.id} | reason=support_role_not_found | ticketType=${ticketType.id} | roleId=${ticketType.supportRoleId}`,
+      );
+      return;
+    }
+
+    const ticketChannel = await interaction.guild.channels.create({
+      name: ticketChannelName(member, ticketType),
+      type: ChannelType.GuildText,
+      parent: category.id,
+      topic: currentTicketTopic,
+      permissionOverwrites: [
+        {
+          id: interaction.guild.roles.everyone.id,
+          deny: [PermissionsBitField.Flags.ViewChannel],
+        },
+        {
+          id: interaction.user.id,
+          allow: [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages,
+            PermissionsBitField.Flags.ReadMessageHistory,
+            PermissionsBitField.Flags.AttachFiles,
+            PermissionsBitField.Flags.EmbedLinks,
+          ],
+        },
+        {
+          id: supportRole.id,
+          allow: [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages,
+            PermissionsBitField.Flags.ReadMessageHistory,
+            PermissionsBitField.Flags.ManageMessages,
+          ],
+        },
+        {
+          id: botMember.id,
+          allow: [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages,
+            PermissionsBitField.Flags.ReadMessageHistory,
+            PermissionsBitField.Flags.ManageChannels,
+            PermissionsBitField.Flags.EmbedLinks,
+          ],
+        },
+      ],
+      reason: "KlarBot Dashboard Ticket erstellt",
+    });
+
+    logger.success(
+      `[tickets] Ticket channel created | guildId=${interaction.guild.id} | channelId=${ticketChannel.id} | userId=${interaction.user.id} | ticketType=${ticketType.id}`,
+    );
 
     const closeRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      secondaryButton(ticketButtonIds.claim, "📌 Claim"),
-      dangerButton(ticketButtonIds.close, "🔒 Schließen"),
+      dangerButton(ticketCloseRequestButtonId, "Ticket schliessen"),
     );
 
     await ticketChannel.send({
+      content: `${interaction.user} <@&${supportRole.id}>`,
       embeds: [
-        infoEmbed(
-          [
-            `**Tickettyp:** ${definition.label}`,
-            `**Nutzer:** ${interaction.user}`,
-            "",
-            definition.description,
-            "",
-            "Bitte bleibe respektvoll und beschreibe dein Anliegen so klar wie moeglich.",
-          ].join("\n"),
-          `🎫 ${definition.label}`,
-        ),
+        new EmbedBuilder()
+          .setColor(embedColor(ticketType.embedColor))
+          .setTitle(`${ticketType.emoji ? `${ticketType.emoji} ` : ""}${ticketType.name}`)
+          .setDescription(
+            ticketType.description ||
+              "Bitte beschreibe dein Anliegen so klar wie moeglich. Das Support-Team meldet sich hier.",
+          ),
       ],
       components: [closeRow],
-    });
-
-    await logTicketCreatedEvent({
-      guild: interaction.guild,
-      user: interaction.user,
-      ticketChannel,
-      ticketType: definition.label,
     });
 
     await interaction.editReply({
       content: `Dein Ticket wurde erstellt: ${ticketChannel}`,
     });
   } catch (error) {
-    await logTicketErrorEvent({
-      guild: interaction.guild,
-      action: "Ticket erstellen",
-      errorReason: getErrorMessage(error),
-      user: interaction.user,
-      channel: interaction.channel,
-    });
-
+    logger.error(
+      `[tickets] create failed | guildId=${interaction.guild.id} | userId=${interaction.user.id} | reason=${errorMessage(error)}`,
+      error,
+    );
     await interaction.editReply({
-      content: "KlarBot konnte dieses Ticket nicht erstellen. Bitte informiere das Team.",
+      content: "KlarBot konnte dieses Ticket nicht erstellen. Bitte pruefe Bot-Rechte und Konfiguration.",
     });
   }
 }
 
-async function closeTicket(interaction: ButtonInteraction) {
+async function requestTicketClose(interaction: ButtonInteraction) {
   if (!interaction.guild || interaction.channel?.type !== ChannelType.GuildText) {
     await interaction.reply({
       content: "Dieses Ticket kann hier nicht geschlossen werden.",
@@ -158,103 +382,69 @@ async function closeTicket(interaction: ButtonInteraction) {
     return;
   }
 
-  try {
-    const member = await interaction.guild.members.fetch(interaction.user.id);
-    const topic = interaction.channel.topic ?? "";
-    const openerId = topic.split(":")[2];
+  logger.info(
+    `[tickets] Ticket close requested | guildId=${interaction.guild.id} | channelId=${interaction.channel.id} | userId=${interaction.user.id}`,
+  );
 
-    if (openerId !== interaction.user.id && !canManageTicket(member)) {
-      await interaction.reply({
-        content: "Du darfst dieses Ticket nicht schließen.",
-        ephemeral: true,
-      });
-      return;
-    }
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    secondaryButton(ticketCloseConfirmButtonId, "Schliessen bestaetigen"),
+  );
 
-    const channelName = interaction.channel.name;
-    const openerUser = openerId
-      ? await interaction.client.users.fetch(openerId).catch(() => null)
-      : null;
+  await interaction.reply({
+    content: "Moechtest du dieses Ticket wirklich schliessen? Der Channel wird geloescht.",
+    components: [row],
+    ephemeral: true,
+  });
+}
 
+async function confirmTicketClose(interaction: ButtonInteraction) {
+  if (!interaction.guild || interaction.channel?.type !== ChannelType.GuildText) {
     await interaction.reply({
-      embeds: [successEmbed("Ticket wird geschlossen...")],
+      content: "Dieses Ticket kann hier nicht geschlossen werden.",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const topic = interaction.channel.topic ?? "";
+
+  if (!topic.startsWith(`${ticketTopicPrefix}:dashboard:`)) {
+    await interaction.reply({
+      content: "Dieser Channel ist kein KlarBot Ticket.",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  try {
+    await interaction.reply({
+      content: "Ticket wird geschlossen...",
+      ephemeral: true,
     });
 
-    try {
-      const transcript = await buildTicketTranscript({
-        channel: interaction.channel,
-        guildName: interaction.guild.name,
-        createdBy: openerUser?.tag ?? (openerId ? `User ${openerId}` : "Unbekannt"),
-        closedBy: interaction.user.tag,
-      });
-
-      await uploadTicketTranscript({
-        guild: interaction.guild,
-        transcript,
-        ticketUser: openerUser,
-        closedBy: interaction.user,
-      });
-    } catch (transcriptError) {
-      await logTicketErrorEvent({
-        guild: interaction.guild,
-        action: "Transcript erstellen",
-        errorReason: getErrorMessage(transcriptError),
-        user: openerUser,
-        channel: interaction.channel,
-      });
-    }
-
-    await logTicketClosedEvent({
-      guild: interaction.guild,
-      user: openerUser,
-      closedBy: interaction.user,
-      ticketChannelName: channelName,
-      reason: "Ticket geschlossen",
-    });
-
-    logger.success(`Ticket geschlossen: ${channelName} von ${interaction.user.tag}`);
-    await wait(5000);
+    const channelId = interaction.channel.id;
+    const channelName = interaction.channel.name;
     await interaction.channel.delete("KlarBot Ticket geschlossen");
+    logger.success(
+      `[tickets] Ticket deleted | guildId=${interaction.guild.id} | channelId=${channelId} | name=${channelName} | closedBy=${interaction.user.id}`,
+    );
   } catch (error) {
-    await logTicketErrorEvent({
-      guild: interaction.guild,
-      action: "Ticket schließen",
-      errorReason: getErrorMessage(error),
-      user: interaction.user,
-      channel: interaction.channel,
-    });
+    logger.error(
+      `[tickets] close failed | guildId=${interaction.guild.id} | channelId=${interaction.channel.id} | reason=${errorMessage(error)}`,
+      error,
+    );
 
     if (!interaction.replied) {
       await interaction.reply({
-        content: "KlarBot konnte dieses Ticket nicht schließen. Bitte informiere das Team.",
+        content: "KlarBot konnte dieses Ticket nicht schliessen.",
         ephemeral: true,
       });
       return;
     }
 
     await interaction.followUp({
-      content: "KlarBot konnte dieses Ticket nicht vollständig schließen. Bitte prüfe Bot-Rechte und Channel-Zugriff.",
+      content: "KlarBot konnte dieses Ticket nicht schliessen.",
       ephemeral: true,
     }).catch(() => undefined);
   }
-}
-
-function getTicketTypeFromButton(customId: string): TicketType | null {
-  const match = Object.entries(ticketButtonIds).find(([, buttonId]) => buttonId === customId);
-
-  if (!match || match[0] === "close") {
-    return null;
-  }
-
-  return match[0] as TicketType;
-}
-
-function wait(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Unbekannter Fehler";
 }

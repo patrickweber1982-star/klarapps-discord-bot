@@ -5,6 +5,7 @@ import { logger } from "../../utils/logger.js";
 import { publishInfoConfigForGuild } from "../info/infoPublish.js";
 import { publishJoinMessageConfigForGuild } from "../joinMessage/joinMessage.js";
 import { applyServerProfileForGuild } from "../serverProfile/serverProfile.js";
+import { publishTicketPanelForGuild } from "../tickets/ticketPanel.js";
 import {
   applyRoleStructureForGuild,
   deleteRoleStructureForGuild,
@@ -84,6 +85,13 @@ async function processNextJob(client: Client, config: BotConfig) {
             job.payload.verifyConfig,
             job.messageId || job.payload.verifyConfig.publishedMessageId || null,
           )
+        : job.jobType === "TICKET_PANEL_PUBLISH" && job.payload.ticketConfig
+          ? await publishTicketPanelForGuild(
+              client,
+              job.guildId,
+              job.payload.ticketConfig,
+              job.messageId || job.payload.ticketConfig.publishedMessageId || null,
+            )
         : job.jobType === "JOIN_MESSAGE_PUBLISH" &&
             job.payload.joinMessageConfig
           ? await publishJoinMessageConfigForGuild(

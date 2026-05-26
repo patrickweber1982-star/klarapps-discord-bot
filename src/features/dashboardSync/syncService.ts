@@ -81,8 +81,9 @@ async function buildDiscordResourceSnapshot(guild: Guild) {
     const isTextChannel =
       channel.type === ChannelType.GuildText ||
       channel.type === ChannelType.GuildAnnouncement;
+    const isCategory = channel.type === ChannelType.GuildCategory;
 
-    if (!isTextChannel) continue;
+    if (!isTextChannel && !isCategory) continue;
 
     const permissions = botMember ? channel.permissionsFor(botMember) : null;
 
@@ -90,10 +91,12 @@ async function buildDiscordResourceSnapshot(guild: Guild) {
       id: channel.id,
       name: channel.name,
       type: String(channel.type),
-      parentId: channel.parentId ?? null,
+      parentId: "parentId" in channel ? channel.parentId ?? null : null,
       position: channel.position ?? null,
       botCanView: Boolean(permissions?.has(PermissionFlagsBits.ViewChannel)),
-      botCanSend: Boolean(permissions?.has(PermissionFlagsBits.SendMessages)),
+      botCanSend: isTextChannel
+        ? Boolean(permissions?.has(PermissionFlagsBits.SendMessages))
+        : false,
     });
   }
 

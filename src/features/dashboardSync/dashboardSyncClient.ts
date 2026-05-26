@@ -20,6 +20,9 @@ export type DashboardSyncClient = {
   readJoinMessageConfig(
     guildId: string,
   ): Promise<DashboardInternalReadResult<DashboardJoinMessageConfigPayload>>;
+  readTicketConfig(
+    guildId: string,
+  ): Promise<DashboardInternalReadResult<DashboardTicketConfigPayload>>;
   readGuildConfig(guildId: string): Promise<DashboardSyncReadResult>;
   readGuildTrial(
     guildId: string,
@@ -179,6 +182,41 @@ export type DashboardJoinMessageConfigPayload = {
 export type DashboardJoinMessageConfig =
   DashboardJoinMessageConfigPayload["joinMessageConfig"];
 
+export type DashboardTicketTypeConfig = {
+  id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  ticketCategoryId: string;
+  supportRoleId: string;
+  embedColor: string;
+};
+
+export type DashboardTicketConfigPayload = {
+  ok: true;
+  mode: "klarbot_ticket_config";
+  guildId: string;
+  ticketConfig: {
+    guildId: string;
+    enabled: boolean;
+    status: string;
+    panelChannelId: string;
+    ticketCategoryId: string;
+    supportRoleId: string;
+    panelTitle: string;
+    panelDescription: string;
+    buttonLabel: string;
+    embedColor: string;
+    ticketTypes: DashboardTicketTypeConfig[];
+    publishedMessageId?: string;
+    publishedAt?: string;
+    updatedAt: string;
+  };
+};
+
+export type DashboardTicketConfig =
+  DashboardTicketConfigPayload["ticketConfig"];
+
 export type DashboardInfoBlockConfig = {
   id: string;
   type: "image" | "embed";
@@ -247,6 +285,7 @@ type DashboardBotJob = {
   id: string;
   jobType:
     | "VERIFY_PUBLISH"
+    | "TICKET_PANEL_PUBLISH"
     | "JOIN_MESSAGE_PUBLISH"
     | "INFO_PUBLISH"
     | "SERVER_PROFILE_APPLY"
@@ -262,6 +301,7 @@ type DashboardBotJob = {
   messageId: string | null;
   payload: {
     verifyConfig?: DashboardVerifyConfig;
+    ticketConfig?: DashboardTicketConfig;
     joinMessageConfig?: DashboardJoinMessageConfig;
     infoConfig?: DashboardInfoConfig;
     serverProfileConfig?: DashboardServerProfileConfig;
@@ -285,6 +325,7 @@ type DashboardBotJobCompletedPayload = {
     id: string;
     jobType:
       | "VERIFY_PUBLISH"
+      | "TICKET_PANEL_PUBLISH"
       | "JOIN_MESSAGE_PUBLISH"
       | "INFO_PUBLISH"
       | "SERVER_PROFILE_APPLY"
@@ -469,6 +510,34 @@ function isDashboardJoinMessageConfigPayload(
   );
 }
 
+function isDashboardTicketConfigPayload(
+  value: unknown,
+): value is DashboardTicketConfigPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Partial<DashboardTicketConfigPayload>;
+  const config = payload.ticketConfig;
+
+  return (
+    payload.ok === true &&
+    payload.mode === "klarbot_ticket_config" &&
+    typeof payload.guildId === "string" &&
+    Boolean(config) &&
+    typeof config?.enabled === "boolean" &&
+    typeof config?.status === "string" &&
+    typeof config?.panelChannelId === "string" &&
+    typeof config?.ticketCategoryId === "string" &&
+    typeof config?.supportRoleId === "string" &&
+    typeof config?.panelTitle === "string" &&
+    typeof config?.panelDescription === "string" &&
+    typeof config?.buttonLabel === "string" &&
+    typeof config?.embedColor === "string" &&
+    Array.isArray(config?.ticketTypes)
+  );
+}
+
 function isDashboardGuildSnapshotPayload(
   value: unknown,
 ): value is DashboardGuildSnapshotPayload {
@@ -510,6 +579,7 @@ function isDashboardBotJobClaimPayload(
   }
 
   const verifyConfig = job.payload?.verifyConfig;
+  const ticketConfig = job.payload?.ticketConfig;
   const joinMessageConfig = job.payload?.joinMessageConfig;
   const infoConfig = job.payload?.infoConfig;
   const serverProfileConfig = job.payload?.serverProfileConfig;
@@ -533,6 +603,19 @@ function isDashboardBotJobClaimPayload(
       (verifyConfig?.confirmationMode === "button" ||
         verifyConfig?.confirmationMode === "emoji") &&
       typeof verifyConfig?.verifiedRoleId === "string"
+    );
+  }
+
+  if (job.jobType === "TICKET_PANEL_PUBLISH") {
+    return (
+      Boolean(ticketConfig) &&
+      typeof ticketConfig?.panelChannelId === "string" &&
+      typeof ticketConfig?.ticketCategoryId === "string" &&
+      typeof ticketConfig?.supportRoleId === "string" &&
+      typeof ticketConfig?.panelTitle === "string" &&
+      typeof ticketConfig?.panelDescription === "string" &&
+      typeof ticketConfig?.buttonLabel === "string" &&
+      Array.isArray(ticketConfig?.ticketTypes)
     );
   }
 
@@ -603,6 +686,7 @@ function isDashboardBotJobCompletedPayload(
     payload.ok === true &&
     payload.mode === "klarbot_job_completed" &&
     (payload.job?.jobType === "VERIFY_PUBLISH" ||
+      payload.job?.jobType === "TICKET_PANEL_PUBLISH" ||
       payload.job?.jobType === "JOIN_MESSAGE_PUBLISH" ||
       payload.job?.jobType === "INFO_PUBLISH" ||
       payload.job?.jobType === "SERVER_PROFILE_APPLY" ||
@@ -796,6 +880,14 @@ export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClie
         `/api/bot/guilds/${encodeURIComponent(guildId)}/join-message-config`,
         isDashboardJoinMessageConfigPayload,
         "Join-Message-Konfiguration konnte nicht geladen werden.",
+        { requireEnabled: false },
+      );
+    },
+    async readTicketConfig(guildId: string) {
+      return readInternal(
+        `/api/bot/guilds/${encodeURIComponent(guildId)}/ticket-config`,
+        isDashboardTicketConfigPayload,
+        "Ticket-Konfiguration konnte nicht geladen werden.",
         { requireEnabled: false },
       );
     },
