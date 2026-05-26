@@ -298,6 +298,13 @@ export async function sendJoinMessageForMember(
   );
 
   try {
+    if (!joinMessageConfig.useEmbed && configuredImageUrl && !channelResult.canEmbedLinks) {
+      logger.warn(
+        `Join Message Bild blockiert | guild=${member.guild.id} | member=${member.id} | channelId=${joinMessageConfig.joinChannelId} | sent=false | reason=missing_embed_links_permission`,
+      );
+      return;
+    }
+
     if (joinMessageConfig.useEmbed) {
       if (!channelResult.canEmbedLinks) {
         logger.warn(
@@ -328,10 +335,15 @@ export async function sendJoinMessageForMember(
         embeds: [embed],
       });
     } else {
+      const imageEmbed = configuredImageUrl
+        ? new EmbedBuilder()
+            .setColor(embedColor(joinMessageConfig.embedColor))
+            .setImage(configuredImageUrl)
+        : null;
+
       await channelResult.channel.send({
-        content: configuredImageUrl
-          ? `${messageText}\n${configuredImageUrl}`.trim()
-          : messageText,
+        content: messageText,
+        embeds: imageEmbed ? [imageEmbed] : undefined,
       });
     }
 
