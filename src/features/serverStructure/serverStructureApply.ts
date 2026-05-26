@@ -180,3 +180,87 @@ export async function applyServerStructureForGuild(
     skippedChannels,
   };
 }
+
+export async function deleteServerStructureForGuild(
+  client: Client,
+  guildId: string,
+) {
+  logger.warn(`[server-structure] delete job received | guildId=${guildId}`);
+
+  const guild = await client.guilds.fetch(guildId).catch(() => null);
+
+  if (!guild) {
+    logger.warn(
+      `[server-structure] delete failed | guildId=${guildId} | reason=guild_not_found`,
+    );
+    return {
+      ok: false as const,
+      reason: "guild_not_found",
+    };
+  }
+
+  const member = await guild.members.fetchMe().catch(() => null);
+
+  if (!member) {
+    logger.warn(
+      `[server-structure] delete failed | guildId=${guildId} | reason=bot_member_not_found`,
+    );
+    return {
+      ok: false as const,
+      reason: "bot_member_not_found",
+    };
+  }
+
+  if (!member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+    logger.warn(
+      `[server-structure] delete failed | guildId=${guildId} | reason=missing_manage_channels_permission`,
+    );
+    return {
+      ok: false as const,
+      reason: "missing_manage_channels_permission",
+    };
+  }
+
+  const channels = await guild.channels.fetch();
+  const deletableChannels = [...channels.values()]
+    .filter((channel) => channel !== null)
+    .sort(
+      (a, b) =>
+        (a.type === ChannelType.GuildCategory ? 1 : 0) -
+        (b.type === ChannelType.GuildCategory ? 1 : 0),
+    );
+  let deletedChannels = 0;
+  let failedChannels = 0;
+
+  for (const channel of deletableChannels) {
+    try {
+      logger.warn(
+        `[server-structure] deleting channel | guildId=${guildId} | channelId=${channel.id} | name=${channel.name} | type=${channel.type}`,
+      );
+      await channel.delete("KlarApps Dashboard bestehende Serverstruktur loeschen");
+      deletedChannels += 1;
+    } catch (error) {
+      failedChannels += 1;
+      logger.warn(
+        `[server-structure] channel delete failed | guildId=${guildId} | channelId=${channel.id} | reason=${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  if (failedChannels > 0) {
+    return {
+      ok: false as const,
+      reason: `channels_delete_partial_failed:${failedChannels}`,
+    };
+  }
+
+  logger.success(
+    `[server-structure] delete success | guildId=${guildId} | deletedChannels=${deletedChannels}`,
+  );
+
+  return {
+    ok: true as const,
+    channelId: null,
+    deletedChannels,
+  };
+}

@@ -232,7 +232,8 @@ type DashboardBotJob = {
     | "JOIN_MESSAGE_PUBLISH"
     | "INFO_PUBLISH"
     | "SERVER_PROFILE_APPLY"
-    | "SERVER_STRUCTURE_APPLY";
+    | "SERVER_STRUCTURE_APPLY"
+    | "SERVER_STRUCTURE_DELETE";
   status: "processing";
   guildId: string;
   moduleSlug: string | null;
@@ -266,7 +267,8 @@ type DashboardBotJobCompletedPayload = {
       | "JOIN_MESSAGE_PUBLISH"
       | "INFO_PUBLISH"
       | "SERVER_PROFILE_APPLY"
-      | "SERVER_STRUCTURE_APPLY";
+      | "SERVER_STRUCTURE_APPLY"
+      | "SERVER_STRUCTURE_DELETE";
     status: "success" | "failed";
     guildId: string;
     messageId: string | null;
@@ -546,6 +548,10 @@ function isDashboardBotJobClaimPayload(
     );
   }
 
+  if (job.jobType === "SERVER_STRUCTURE_DELETE") {
+    return true;
+  }
+
   return false;
 }
 
@@ -565,7 +571,8 @@ function isDashboardBotJobCompletedPayload(
       payload.job?.jobType === "JOIN_MESSAGE_PUBLISH" ||
       payload.job?.jobType === "INFO_PUBLISH" ||
       payload.job?.jobType === "SERVER_PROFILE_APPLY" ||
-      payload.job?.jobType === "SERVER_STRUCTURE_APPLY") &&
+      payload.job?.jobType === "SERVER_STRUCTURE_APPLY" ||
+      payload.job?.jobType === "SERVER_STRUCTURE_DELETE") &&
     (payload.job.status === "success" || payload.job.status === "failed")
   );
 }

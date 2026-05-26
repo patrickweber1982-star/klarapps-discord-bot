@@ -5,7 +5,10 @@ import { logger } from "../../utils/logger.js";
 import { publishInfoConfigForGuild } from "../info/infoPublish.js";
 import { publishJoinMessageConfigForGuild } from "../joinMessage/joinMessage.js";
 import { applyServerProfileForGuild } from "../serverProfile/serverProfile.js";
-import { applyServerStructureForGuild } from "../serverStructure/serverStructureApply.js";
+import {
+  applyServerStructureForGuild,
+  deleteServerStructureForGuild,
+} from "../serverStructure/serverStructureApply.js";
 import { publishVerifyPanelForGuild } from "../verify/verifyPanelSync.js";
 import { createDashboardSyncClient } from "./dashboardSyncClient.js";
 
@@ -104,6 +107,8 @@ async function processNextJob(client: Client, config: BotConfig) {
                 job.guildId,
                 job.payload.serverStructureConfig,
               )
+          : job.jobType === "SERVER_STRUCTURE_DELETE"
+            ? await deleteServerStructureForGuild(client, job.guildId)
           : {
               ok: false as const,
               reason: "unsupported_job_payload",
