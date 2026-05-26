@@ -24,6 +24,7 @@ type ActiveJoinMessageConfigResult =
         | "config_not_found"
         | "config_disabled"
         | "missing_channel"
+        | "missing_message"
         | "sync_error";
       message: string;
     };
@@ -96,6 +97,8 @@ async function getSendableTextChannel(
       reason: "channel_not_found",
       channelFound: false,
       canSend: false,
+      canEmbedLinks: false,
+      canAttachFiles: false,
     };
   }
 
@@ -105,6 +108,8 @@ async function getSendableTextChannel(
       reason: "channel_not_found",
       channelFound: true,
       canSend: false,
+      canEmbedLinks: false,
+      canAttachFiles: false,
     };
   }
 
@@ -122,6 +127,8 @@ async function getSendableTextChannel(
       reason: "missing_permissions",
       channelFound: true,
       canSend: false,
+      canEmbedLinks: permissions.has(PermissionFlagsBits.EmbedLinks),
+      canAttachFiles: permissions.has(PermissionFlagsBits.AttachFiles),
     };
   }
 
@@ -130,6 +137,12 @@ async function getSendableTextChannel(
     channel,
     channelFound: true,
     canSend: true,
+    canEmbedLinks: permissions
+      ? permissions.has(PermissionFlagsBits.EmbedLinks)
+      : false,
+    canAttachFiles: permissions
+      ? permissions.has(PermissionFlagsBits.AttachFiles)
+      : false,
   };
 }
 
@@ -156,7 +169,7 @@ export async function loadActiveJoinMessageConfig(
   const channelAvailable = Boolean(joinMessageConfig.joinChannelId);
 
   logger.info(
-    `Join Message Config geladen | guild=${guildId} | configFound=true | enabled=${joinMessageConfig.enabled} | status=${joinMessageConfig.status} | channelId=${channelAvailable ? "true" : "false"}`,
+    `Join Message Config geladen | guild=${guildId} | configFound=true | enabled=${joinMessageConfig.enabled} | status=${joinMessageConfig.status} | channelId=${channelAvailable ? joinMessageConfig.joinChannelId : "missing"} | imageUrl=${joinMessageConfig.imageUrl ? "true" : "false"} | embedEnabled=${joinMessageConfig.useEmbed ? "true" : "false"}`,
   );
 
   if (!joinMessageConfig.enabled) {
@@ -172,6 +185,14 @@ export async function loadActiveJoinMessageConfig(
       ok: false,
       reason: "missing_channel",
       message: "Join Message hat keinen Channel konfiguriert.",
+    };
+  }
+
+  if (!joinMessageConfig.messageText.trim()) {
+    return {
+      ok: false,
+      reason: "missing_message",
+      message: "Join Message hat keinen Nachrichtentext konfiguriert.",
     };
   }
 
@@ -255,12 +276,12 @@ export async function sendJoinMessageForMember(
   );
 
   logger.info(
-    `Join Message Channel pruefung | guild=${member.guild.id} | channelId=${joinMessageConfig.joinChannelId || "missing"} | channelFound=${channelResult.channelFound ? "true" : "false"} | canSend=${channelResult.canSend ? "true" : "false"}`,
+    `Join Message Channel pruefung | guild=${member.guild.id} | channelId=${joinMessageConfig.joinChannelId || "missing"} | channelFound=${channelResult.channelFound ? "true" : "false"} | canSend=${channelResult.canSend ? "true" : "false"} | canEmbedLinks=${channelResult.canEmbedLinks ? "true" : "false"} | canAttachFiles=${channelResult.canAttachFiles ? "true" : "false"}`,
   );
 
   if (!channelResult.ok) {
     logger.warn(
-      `Join Message konnte nicht gesendet werden | guild=${member.guild.id} | member=${member.id} | channelId=${joinMessageConfig.joinChannelId || "missing"} | channelFound=${channelResult.channelFound ? "true" : "false"} | canSend=${channelResult.canSend ? "true" : "false"} | sent=false | reason=${channelResult.reason}`,
+      `Join Message konnte nicht gesendet werden | guild=${member.guild.id} | member=${member.id} | channelId=${joinMessageConfig.joinChannelId || "missing"} | channelFound=${channelResult.channelFound ? "true" : "false"} | canSend=${channelResult.canSend ? "true" : "false"} | canEmbedLinks=${channelResult.canEmbedLinks ? "true" : "false"} | canAttachFiles=${channelResult.canAttachFiles ? "true" : "false"} | sent=false | reason=${channelResult.reason}`,
     );
     return;
   }
@@ -272,8 +293,19 @@ export async function sendJoinMessageForMember(
   );
   const configuredImageUrl = imageUrl(joinMessageConfig.imageUrl);
 
+  logger.info(
+    `Join Message Send-Versuch | guild=${member.guild.id} | member=${member.id} | configFound=true | enabled=true | status=${joinMessageConfig.status} | channelId=${joinMessageConfig.joinChannelId} | imageUrl=${configuredImageUrl ? "true" : "false"} | embedEnabled=${joinMessageConfig.useEmbed ? "true" : "false"}`,
+  );
+
   try {
     if (joinMessageConfig.useEmbed) {
+      if (!channelResult.canEmbedLinks) {
+        logger.warn(
+          `Join Message Embed blockiert | guild=${member.guild.id} | member=${member.id} | channelId=${joinMessageConfig.joinChannelId} | sent=false | reason=missing_embed_links_permission`,
+        );
+        return;
+      }
+
       const shouldPingInContent =
         joinMessageConfig.pingUser ||
         joinMessageConfig.messageText.includes("{user}");
@@ -304,11 +336,12 @@ export async function sendJoinMessageForMember(
     }
 
     logger.welcome(
-      `Join Message gesendet | guild=${member.guild.id} | member=${member.id} | channelId=${joinMessageConfig.joinChannelId} | sent=true`,
+      `Join Message gesendet | guild=${member.guild.id} | member=${member.id} | channelId=${joinMessageConfig.joinChannelId} | imageUrl=${configuredImageUrl ? "true" : "false"} | embedEnabled=${joinMessageConfig.useEmbed ? "true" : "false"} | sent=true`,
     );
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     logger.warn(
-      `Join Message Versand fehlgeschlagen | guild=${member.guild.id} | member=${member.id} | channelId=${joinMessageConfig.joinChannelId} | sent=false`,
+      `Join Message Versand fehlgeschlagen | guild=${member.guild.id} | member=${member.id} | channelId=${joinMessageConfig.joinChannelId} | imageUrl=${configuredImageUrl ? "true" : "false"} | embedEnabled=${joinMessageConfig.useEmbed ? "true" : "false"} | sent=false | error=${message}`,
       error,
     );
   }
