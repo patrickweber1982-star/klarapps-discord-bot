@@ -4,6 +4,7 @@ import type { BotConfig } from "../../config/env.js";
 import { logger } from "../../utils/logger.js";
 import { publishInfoConfigForGuild } from "../info/infoPublish.js";
 import { publishJoinMessageConfigForGuild } from "../joinMessage/joinMessage.js";
+import { applyServerProfileForGuild } from "../serverProfile/serverProfile.js";
 import { publishVerifyPanelForGuild } from "../verify/verifyPanelSync.js";
 import { createDashboardSyncClient } from "./dashboardSyncClient.js";
 
@@ -87,6 +88,13 @@ async function processNextJob(client: Client, config: BotConfig) {
                 client,
                 job.guildId,
                 job.payload.infoConfig,
+              )
+          : job.jobType === "SERVER_PROFILE_APPLY" &&
+              job.payload.serverProfileConfig
+            ? await applyServerProfileForGuild(
+                client,
+                job.guildId,
+                job.payload.serverProfileConfig,
               )
           : {
               ok: false as const,

@@ -217,9 +217,20 @@ export type DashboardInfoConfig = {
   blocks: DashboardInfoBlockConfig[];
 };
 
+export type DashboardServerProfileConfig = {
+  guildId?: string;
+  nickname: string;
+  enabled?: boolean;
+  lastAppliedAt?: string;
+};
+
 type DashboardBotJob = {
   id: string;
-  jobType: "VERIFY_PUBLISH" | "JOIN_MESSAGE_PUBLISH" | "INFO_PUBLISH";
+  jobType:
+    | "VERIFY_PUBLISH"
+    | "JOIN_MESSAGE_PUBLISH"
+    | "INFO_PUBLISH"
+    | "SERVER_PROFILE_APPLY";
   status: "processing";
   guildId: string;
   moduleSlug: string | null;
@@ -230,6 +241,7 @@ type DashboardBotJob = {
     verifyConfig?: DashboardVerifyConfig;
     joinMessageConfig?: DashboardJoinMessageConfig;
     infoConfig?: DashboardInfoConfig;
+    serverProfileConfig?: DashboardServerProfileConfig;
     guildName?: string;
   };
   attempts: number;
@@ -246,7 +258,11 @@ type DashboardBotJobCompletedPayload = {
   mode: "klarbot_job_completed";
   job: {
     id: string;
-    jobType: "VERIFY_PUBLISH" | "JOIN_MESSAGE_PUBLISH" | "INFO_PUBLISH";
+    jobType:
+      | "VERIFY_PUBLISH"
+      | "JOIN_MESSAGE_PUBLISH"
+      | "INFO_PUBLISH"
+      | "SERVER_PROFILE_APPLY";
     status: "success" | "failed";
     guildId: string;
     messageId: string | null;
@@ -488,6 +504,7 @@ function isDashboardBotJobClaimPayload(
   const verifyConfig = job.payload?.verifyConfig;
   const joinMessageConfig = job.payload?.joinMessageConfig;
   const infoConfig = job.payload?.infoConfig;
+  const serverProfileConfig = job.payload?.serverProfileConfig;
 
   if (
     job.status !== "processing" ||
@@ -527,6 +544,13 @@ function isDashboardBotJobClaimPayload(
     );
   }
 
+  if (job.jobType === "SERVER_PROFILE_APPLY") {
+    return (
+      Boolean(serverProfileConfig) &&
+      typeof serverProfileConfig?.nickname === "string"
+    );
+  }
+
   return false;
 }
 
@@ -544,7 +568,8 @@ function isDashboardBotJobCompletedPayload(
     payload.mode === "klarbot_job_completed" &&
     (payload.job?.jobType === "VERIFY_PUBLISH" ||
       payload.job?.jobType === "JOIN_MESSAGE_PUBLISH" ||
-      payload.job?.jobType === "INFO_PUBLISH") &&
+      payload.job?.jobType === "INFO_PUBLISH" ||
+      payload.job?.jobType === "SERVER_PROFILE_APPLY") &&
     (payload.job.status === "success" || payload.job.status === "failed")
   );
 }
