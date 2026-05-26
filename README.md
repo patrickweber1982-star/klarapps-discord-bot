@@ -225,7 +225,7 @@ Welcome Polish V1:
 - Nach Freischaltung wird auf `/roles-panel` und Interessenrollen hingewiesen.
 - Logs laufen ueber `[KlarBot] [WELCOME]`.
 
-Der Join-Welcome nutzt das Discord `GuildMembers` Intent. Das Intent ist im Bot-Code immer aktiv und muss im Discord Developer Portal ebenfalls aktiviert sein, damit `guildMemberAdd` ausgeloest wird.
+Der Join-Welcome nutzt das Discord `GuildMembers` Intent. Damit der Bot nicht mit `Used disallowed intents` crasht, wird dieses Privileged Intent nur angefordert, wenn `DISCORD_ENABLE_GUILD_MEMBERS_INTENT=true` gesetzt ist. Das Server Members Intent muss dann auch im Discord Developer Portal fuer genau diese Bot-Application aktiviert sein, damit `guildMemberAdd` ausgeloest wird. `KLARBOT_ENABLE_GUILD_MEMBERS_INTENT` wird nur noch als Legacy-Fallback gelesen.
 
 Permissions:
 

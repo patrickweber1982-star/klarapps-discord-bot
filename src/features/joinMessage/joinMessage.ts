@@ -42,6 +42,26 @@ function embedColor(value: string | undefined) {
   return colors[value?.trim() ?? ""] ?? colors["klarapps-teal"];
 }
 
+function imageUrl(value: string | undefined) {
+  const trimmed = value?.trim() ?? "";
+
+  if (!trimmed) {
+    return "";
+  }
+
+  try {
+    const url = new URL(trimmed);
+
+    if (url.protocol !== "https:" && url.protocol !== "http:") {
+      return "";
+    }
+
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
 function applyPlaceholders(
   template: string,
   member: GuildMember,
@@ -250,6 +270,7 @@ export async function sendJoinMessageForMember(
     member,
     { pingUser: joinMessageConfig.pingUser },
   );
+  const configuredImageUrl = imageUrl(joinMessageConfig.imageUrl);
 
   try {
     if (joinMessageConfig.useEmbed) {
@@ -266,13 +287,19 @@ export async function sendJoinMessageForMember(
         embed.setFooter({ text: joinMessageConfig.embedFooter });
       }
 
+      if (configuredImageUrl) {
+        embed.setImage(configuredImageUrl);
+      }
+
       await channelResult.channel.send({
         content: shouldPingInContent ? member.toString() : undefined,
         embeds: [embed],
       });
     } else {
       await channelResult.channel.send({
-        content: messageText,
+        content: configuredImageUrl
+          ? `${messageText}\n${configuredImageUrl}`.trim()
+          : messageText,
       });
     }
 

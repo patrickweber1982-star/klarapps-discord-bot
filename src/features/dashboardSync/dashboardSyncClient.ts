@@ -20,9 +20,6 @@ export type DashboardSyncClient = {
   readJoinMessageConfig(
     guildId: string,
   ): Promise<DashboardInternalReadResult<DashboardJoinMessageConfigPayload>>;
-  readJoinTestConfig(
-    guildId: string,
-  ): Promise<DashboardInternalReadResult<DashboardJoinTestConfigPayload>>;
   readGuildConfig(guildId: string): Promise<DashboardSyncReadResult>;
   readGuildTrial(
     guildId: string,
@@ -170,6 +167,7 @@ export type DashboardJoinMessageConfigPayload = {
     messageText: string;
     pingUser: boolean;
     useEmbed: boolean;
+    imageUrl: string;
     embedTitle: string;
     embedColor: string;
     embedFooter: string;
@@ -180,23 +178,6 @@ export type DashboardJoinMessageConfigPayload = {
 
 export type DashboardJoinMessageConfig =
   DashboardJoinMessageConfigPayload["joinMessageConfig"];
-
-export type DashboardJoinTestConfigPayload = {
-  ok: true;
-  mode: "klarbot_join_test_config";
-  guildId: string;
-  joinTestConfig: {
-    guildId: string;
-    enabled: boolean;
-    status: string;
-    channelId: string;
-    message: string;
-    updatedAt: string;
-  };
-};
-
-export type DashboardJoinTestConfig =
-  DashboardJoinTestConfigPayload["joinTestConfig"];
 
 export type DashboardInfoBlockConfig = {
   id: string;
@@ -433,31 +414,10 @@ function isDashboardJoinMessageConfigPayload(
     typeof config?.messageText === "string" &&
     typeof config?.pingUser === "boolean" &&
     typeof config?.useEmbed === "boolean" &&
+    typeof config?.imageUrl === "string" &&
     typeof config?.embedTitle === "string" &&
     typeof config?.embedColor === "string" &&
     typeof config?.embedFooter === "string"
-  );
-}
-
-function isDashboardJoinTestConfigPayload(
-  value: unknown,
-): value is DashboardJoinTestConfigPayload {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const payload = value as Partial<DashboardJoinTestConfigPayload>;
-  const config = payload.joinTestConfig;
-
-  return (
-    payload.ok === true &&
-    payload.mode === "klarbot_join_test_config" &&
-    typeof payload.guildId === "string" &&
-    Boolean(config) &&
-    typeof config?.enabled === "boolean" &&
-    typeof config?.status === "string" &&
-    typeof config?.channelId === "string" &&
-    typeof config?.message === "string"
   );
 }
 
@@ -756,14 +716,6 @@ export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClie
         `/api/bot/guilds/${encodeURIComponent(guildId)}/join-message-config`,
         isDashboardJoinMessageConfigPayload,
         "Join-Message-Konfiguration konnte nicht geladen werden.",
-        { requireEnabled: false },
-      );
-    },
-    async readJoinTestConfig(guildId: string) {
-      return readInternal(
-        `/api/bot/guilds/${encodeURIComponent(guildId)}/join-test-config`,
-        isDashboardJoinTestConfigPayload,
-        "Join-Test-Konfiguration konnte nicht geladen werden.",
         { requireEnabled: false },
       );
     },
