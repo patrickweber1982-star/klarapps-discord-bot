@@ -9,10 +9,10 @@ import type { DashboardServerStructureConfig } from "../dashboardSync/dashboardS
 import { logger } from "../../utils/logger.js";
 
 function normalizeName(value: string) {
-  return value.trim().replace(/\s+/g, " ").slice(0, 100);
+  return value.trim().slice(0, 100);
 }
 
-function normalizeTextChannelName(value: string) {
+function fallbackTextChannelName(value: string) {
   const normalized = value
     .trim()
     .toLowerCase()
@@ -23,6 +23,21 @@ function normalizeTextChannelName(value: string) {
     .slice(0, 100);
 
   return normalized || "neuer-channel";
+}
+
+function fallbackGenericName(value: string, fallback: string) {
+  const normalized = value
+    .trim()
+    .replace(/[^\p{L}\p{N}\s_-]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 100);
+
+  return normalized || fallback;
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function channelTypeFor(input: "text" | "voice") {
@@ -102,44 +117,62 @@ export async function applyServerStructureForGuild(
   let skippedChannels = 0;
 
   for (const categoryConfig of serverStructureConfig.categories) {
-    const categoryName = normalizeName(categoryConfig.name);
+    const requestedCategoryName = normalizeName(categoryConfig.name);
 
-    if (!categoryName) {
+    if (!requestedCategoryName) {
       continue;
     }
 
     let category = channels.find(
       (channel) =>
         isCategory(channel) &&
-        channel?.name.toLowerCase() === categoryName.toLowerCase(),
+        channel?.name.toLowerCase() === requestedCategoryName.toLowerCase(),
     );
 
     if (!category) {
-      category = await guild.channels.create({
-        name: categoryName,
-        type: ChannelType.GuildCategory,
-        reason: "KlarApps Dashboard Server Struktur",
-      });
+      category = await guild.channels
+        .create({
+          name: requestedCategoryName,
+          type: ChannelType.GuildCategory,
+          reason: "KlarApps Dashboard Server Struktur",
+        })
+        .catch(async (error) => {
+          const fallbackName = fallbackGenericName(
+            requestedCategoryName,
+            "Kategorie",
+          );
+
+          logger.warn(
+            `[server-structure] category original name rejected | guildId=${guildId} | requestedName=${requestedCategoryName} | fallbackName=${fallbackName} | reason=${errorMessage(error)}`,
+          );
+
+          if (fallbackName === requestedCategoryName) {
+            throw error;
+          }
+
+          return guild.channels.create({
+            name: fallbackName,
+            type: ChannelType.GuildCategory,
+            reason: "KlarApps Dashboard Server Struktur Fallback",
+          });
+        });
       channels.set(category.id, category);
       createdCategories += 1;
       logger.info(
-        `[server-structure] category created | guildId=${guildId} | name=${categoryName}`,
+        `[server-structure] category created | guildId=${guildId} | requestedName=${requestedCategoryName} | createdName=${category.name}`,
       );
     }
 
     for (const channelConfig of categoryConfig.channels) {
-      const channelName =
-        channelConfig.type === "text"
-          ? normalizeTextChannelName(channelConfig.name)
-          : normalizeName(channelConfig.name);
+      const requestedChannelName = normalizeName(channelConfig.name);
 
-      if (!channelName || !category) {
+      if (!requestedChannelName || !category) {
         continue;
       }
 
       const existing = channels.find((channel) =>
         isMatchingChannel(channel, {
-          name: channelName,
+          name: requestedChannelName,
           type: channelConfig.type,
           parentId: category.id,
         }),
@@ -148,22 +181,44 @@ export async function applyServerStructureForGuild(
       if (existing) {
         skippedChannels += 1;
         logger.info(
-          `[server-structure] channel exists | guildId=${guildId} | category=${categoryName} | name=${channelName} | type=${channelConfig.type}`,
+          `[server-structure] channel exists | guildId=${guildId} | categoryRequestedName=${requestedCategoryName} | categoryCreatedName=${category.name} | requestedName=${requestedChannelName} | existingName=${existing.name} | type=${channelConfig.type}`,
         );
         continue;
       }
 
-      const created = await guild.channels.create({
-        name: channelName,
-        type: channelTypeFor(channelConfig.type),
-        parent: category.id,
-        reason: "KlarApps Dashboard Server Struktur",
-      });
+      const created = await guild.channels
+        .create({
+          name: requestedChannelName,
+          type: channelTypeFor(channelConfig.type),
+          parent: category.id,
+          reason: "KlarApps Dashboard Server Struktur",
+        })
+        .catch(async (error) => {
+          const fallbackName =
+            channelConfig.type === "text"
+              ? fallbackTextChannelName(requestedChannelName)
+              : fallbackGenericName(requestedChannelName, "Neuer Channel");
+
+          logger.warn(
+            `[server-structure] channel original name rejected | guildId=${guildId} | categoryCreatedName=${category.name} | requestedName=${requestedChannelName} | fallbackName=${fallbackName} | type=${channelConfig.type} | reason=${errorMessage(error)}`,
+          );
+
+          if (fallbackName === requestedChannelName) {
+            throw error;
+          }
+
+          return guild.channels.create({
+            name: fallbackName,
+            type: channelTypeFor(channelConfig.type),
+            parent: category.id,
+            reason: "KlarApps Dashboard Server Struktur Fallback",
+          });
+        });
 
       channels.set(created.id, created);
       createdChannels += 1;
       logger.info(
-        `[server-structure] channel created | guildId=${guildId} | category=${categoryName} | name=${channelName} | type=${channelConfig.type}`,
+        `[server-structure] channel created | guildId=${guildId} | categoryRequestedName=${requestedCategoryName} | categoryCreatedName=${category.name} | requestedName=${requestedChannelName} | createdName=${created.name} | type=${channelConfig.type}`,
       );
     }
   }

@@ -225,6 +225,24 @@ export type DashboardServerStructureConfig = {
   publishedAt?: string;
 };
 
+export type DashboardRoleStructureRoleConfig = {
+  id: string;
+  name: string;
+  color: string;
+};
+
+export type DashboardRoleStructureGroupConfig = {
+  id: string;
+  name: string;
+  roles: DashboardRoleStructureRoleConfig[];
+};
+
+export type DashboardRoleStructureConfig = {
+  roleGroups: DashboardRoleStructureGroupConfig[];
+  enabled?: boolean;
+  publishedAt?: string;
+};
+
 type DashboardBotJob = {
   id: string;
   jobType:
@@ -233,7 +251,9 @@ type DashboardBotJob = {
     | "INFO_PUBLISH"
     | "SERVER_PROFILE_APPLY"
     | "SERVER_STRUCTURE_APPLY"
-    | "SERVER_STRUCTURE_DELETE";
+    | "SERVER_STRUCTURE_DELETE"
+    | "ROLE_STRUCTURE_APPLY"
+    | "ROLE_STRUCTURE_DELETE";
   status: "processing";
   guildId: string;
   moduleSlug: string | null;
@@ -246,6 +266,7 @@ type DashboardBotJob = {
     infoConfig?: DashboardInfoConfig;
     serverProfileConfig?: DashboardServerProfileConfig;
     serverStructureConfig?: DashboardServerStructureConfig;
+    roleStructureConfig?: DashboardRoleStructureConfig;
     guildName?: string;
   };
   attempts: number;
@@ -268,7 +289,9 @@ type DashboardBotJobCompletedPayload = {
       | "INFO_PUBLISH"
       | "SERVER_PROFILE_APPLY"
       | "SERVER_STRUCTURE_APPLY"
-      | "SERVER_STRUCTURE_DELETE";
+      | "SERVER_STRUCTURE_DELETE"
+      | "ROLE_STRUCTURE_APPLY"
+      | "ROLE_STRUCTURE_DELETE";
     status: "success" | "failed";
     guildId: string;
     messageId: string | null;
@@ -491,6 +514,7 @@ function isDashboardBotJobClaimPayload(
   const infoConfig = job.payload?.infoConfig;
   const serverProfileConfig = job.payload?.serverProfileConfig;
   const serverStructureConfig = job.payload?.serverStructureConfig;
+  const roleStructureConfig = job.payload?.roleStructureConfig;
 
   if (
     job.status !== "processing" ||
@@ -552,6 +576,17 @@ function isDashboardBotJobClaimPayload(
     return true;
   }
 
+  if (job.jobType === "ROLE_STRUCTURE_APPLY") {
+    return (
+      Boolean(roleStructureConfig) &&
+      Array.isArray(roleStructureConfig?.roleGroups)
+    );
+  }
+
+  if (job.jobType === "ROLE_STRUCTURE_DELETE") {
+    return true;
+  }
+
   return false;
 }
 
@@ -572,7 +607,9 @@ function isDashboardBotJobCompletedPayload(
       payload.job?.jobType === "INFO_PUBLISH" ||
       payload.job?.jobType === "SERVER_PROFILE_APPLY" ||
       payload.job?.jobType === "SERVER_STRUCTURE_APPLY" ||
-      payload.job?.jobType === "SERVER_STRUCTURE_DELETE") &&
+      payload.job?.jobType === "SERVER_STRUCTURE_DELETE" ||
+      payload.job?.jobType === "ROLE_STRUCTURE_APPLY" ||
+      payload.job?.jobType === "ROLE_STRUCTURE_DELETE") &&
     (payload.job.status === "success" || payload.job.status === "failed")
   );
 }
