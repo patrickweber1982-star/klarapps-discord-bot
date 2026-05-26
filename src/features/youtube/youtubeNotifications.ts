@@ -18,6 +18,7 @@ type YoutubeFeedItem = {
   url: string;
   publishedAt: string;
   isLivestream: boolean;
+  thumbnailUrl: string;
 };
 
 let workerStarted = false;
@@ -65,6 +66,37 @@ function readLink(block: string) {
   return decodeXml(match?.[1]?.trim() ?? "");
 }
 
+function readThumbnail(block: string) {
+  const thumbnails = [...block.matchAll(/<media:thumbnail[^>]+url="([^"]+)"/gi)]
+    .map((match) => decodeXml(match[1]?.trim() ?? ""))
+    .filter(Boolean);
+
+  return selectPreferredThumbnail(thumbnails);
+}
+
+function selectPreferredThumbnail(thumbnails: string[]) {
+  const priorities = [
+    "maxresdefault",
+    "hqdefault",
+    "high",
+    "mqdefault",
+    "medium",
+    "default",
+  ];
+
+  for (const priority of priorities) {
+    const match = thumbnails.find((thumbnail) =>
+      thumbnail.toLowerCase().includes(priority),
+    );
+
+    if (match) {
+      return match;
+    }
+  }
+
+  return thumbnails[0] ?? "";
+}
+
 function parseFeed(xml: string): YoutubeFeedItem[] {
   const entries = xml.match(/<entry[\s\S]*?<\/entry>/gi) ?? [];
 
@@ -74,6 +106,7 @@ function parseFeed(xml: string): YoutubeFeedItem[] {
       const title = readTag(entry, "title");
       const url = readLink(entry) || `https://www.youtube.com/watch?v=${videoId}`;
       const publishedAt = readTag(entry, "published");
+      const thumbnailUrl = readThumbnail(entry);
 
       return {
         videoId,
@@ -81,6 +114,7 @@ function parseFeed(xml: string): YoutubeFeedItem[] {
         url,
         publishedAt,
         isLivestream: false,
+        thumbnailUrl,
       };
     })
     .filter((item) => item.videoId && item.title && item.url);
@@ -108,6 +142,12 @@ async function classifyItems(items: YoutubeFeedItem[]) {
           id?: string;
           snippet?: {
             liveBroadcastContent?: string;
+            thumbnails?: Record<
+              string,
+              {
+                url?: string;
+              }
+            >;
           };
           liveStreamingDetails?: Record<string, unknown>;
         }>;
@@ -124,10 +164,26 @@ async function classifyItems(items: YoutubeFeedItem[]) {
       .map((item) => item.id)
       .filter((id): id is string => Boolean(id)),
   );
+  const thumbnailByVideoId = new Map(
+    (payload?.items ?? [])
+      .map((item) => {
+        const thumbnails = item.snippet?.thumbnails ?? {};
+        const thumbnailUrl = selectPreferredThumbnail([
+          thumbnails.maxres?.url ?? "",
+          thumbnails.high?.url ?? "",
+          thumbnails.medium?.url ?? "",
+          thumbnails.default?.url ?? "",
+        ].filter(Boolean));
+
+        return item.id && thumbnailUrl ? [item.id, thumbnailUrl] : null;
+      })
+      .filter((entry): entry is [string, string] => Boolean(entry)),
+  );
 
   return items.map((item) => ({
     ...item,
     isLivestream: liveIds.has(item.videoId),
+    thumbnailUrl: thumbnailByVideoId.get(item.videoId) ?? item.thumbnailUrl,
   }));
 }
 
@@ -163,8 +219,7 @@ function buildEmbed(
   item: YoutubeFeedItem,
 ) {
   const channelName = subscription.displayName || subscription.youtubeChannelId;
-
-  return new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setColor(embedColor(subscription.embedColor))
     .setTitle(item.title)
     .setURL(item.url)
@@ -175,6 +230,12 @@ function buildEmbed(
     )
     .setFooter({ text: "KlarBot YouTube" })
     .setTimestamp(item.publishedAt ? new Date(item.publishedAt) : new Date());
+
+  if (item.thumbnailUrl) {
+    embed.setImage(item.thumbnailUrl);
+  }
+
+  return embed;
 }
 
 async function sendNotification(
@@ -360,6 +421,7 @@ export async function sendYoutubeTestNotificationForGuild(
     url: "https://www.youtube.com/",
     publishedAt: new Date().toISOString(),
     isLivestream: false,
+    thumbnailUrl: "",
   });
 
   if (!sent) {
