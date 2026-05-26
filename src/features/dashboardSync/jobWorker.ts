@@ -15,6 +15,7 @@ import {
   deleteServerStructureForGuild,
 } from "../serverStructure/serverStructureApply.js";
 import { publishVerifyPanelForGuild } from "../verify/verifyPanelSync.js";
+import { publishYoutubeNotificationsForGuild } from "../youtube/youtubeNotifications.js";
 import { createDashboardSyncClient } from "./dashboardSyncClient.js";
 
 let workerStarted = false;
@@ -130,6 +131,13 @@ async function processNextJob(client: Client, config: BotConfig) {
               )
           : job.jobType === "ROLE_STRUCTURE_DELETE"
             ? await deleteRoleStructureForGuild(client, job.guildId)
+          : job.jobType === "YOUTUBE_NOTIFICATIONS_PUBLISH" &&
+              job.payload.youtubeNotificationsConfig
+            ? await publishYoutubeNotificationsForGuild(
+                client,
+                job.guildId,
+                job.payload.youtubeNotificationsConfig,
+              )
           : {
               ok: false as const,
               reason: "unsupported_job_payload",

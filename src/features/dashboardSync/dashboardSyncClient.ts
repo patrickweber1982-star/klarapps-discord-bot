@@ -23,6 +23,9 @@ export type DashboardSyncClient = {
   readTicketConfig(
     guildId: string,
   ): Promise<DashboardInternalReadResult<DashboardTicketConfigPayload>>;
+  readYoutubeNotificationsConfig(
+    guildId: string,
+  ): Promise<DashboardInternalReadResult<DashboardYoutubeNotificationsConfigPayload>>;
   readGuildConfig(guildId: string): Promise<DashboardSyncReadResult>;
   readGuildTrial(
     guildId: string,
@@ -324,6 +327,40 @@ export type DashboardRoleStructureConfig = {
   publishedAt?: string;
 };
 
+export type DashboardYoutubeSubscriptionConfig = {
+  id: string;
+  displayName: string;
+  channelInput: string;
+  youtubeChannelId: string;
+  targetChannelId: string;
+  pingRoleId: string;
+  notifyVideos: boolean;
+  notifyLivestreams: boolean;
+  embedColor: string;
+  enabled: boolean;
+  videoMessage: string;
+  livestreamMessage: string;
+};
+
+export type DashboardYoutubeNotificationsConfigPayload = {
+  ok: true;
+  mode: "klarbot_youtube_notifications_config";
+  guildId: string;
+  youtubeNotificationsConfig: {
+    guildId: string;
+    enabled: boolean;
+    status: string;
+    publishedAt: string;
+    webSubPrepared: boolean;
+    fallbackPollingEnabled: boolean;
+    subscriptions: DashboardYoutubeSubscriptionConfig[];
+    updatedAt: string;
+  };
+};
+
+export type DashboardYoutubeNotificationsConfig =
+  DashboardYoutubeNotificationsConfigPayload["youtubeNotificationsConfig"];
+
 type DashboardBotJob = {
   id: string;
   jobType:
@@ -335,7 +372,8 @@ type DashboardBotJob = {
     | "SERVER_STRUCTURE_APPLY"
     | "SERVER_STRUCTURE_DELETE"
     | "ROLE_STRUCTURE_APPLY"
-    | "ROLE_STRUCTURE_DELETE";
+    | "ROLE_STRUCTURE_DELETE"
+    | "YOUTUBE_NOTIFICATIONS_PUBLISH";
   status: "processing";
   guildId: string;
   moduleSlug: string | null;
@@ -350,6 +388,7 @@ type DashboardBotJob = {
     serverProfileConfig?: DashboardServerProfileConfig;
     serverStructureConfig?: DashboardServerStructureConfig;
     roleStructureConfig?: DashboardRoleStructureConfig;
+    youtubeNotificationsConfig?: DashboardYoutubeNotificationsConfig;
     guildName?: string;
   };
   attempts: number;
@@ -375,7 +414,8 @@ type DashboardBotJobCompletedPayload = {
       | "SERVER_STRUCTURE_APPLY"
       | "SERVER_STRUCTURE_DELETE"
       | "ROLE_STRUCTURE_APPLY"
-      | "ROLE_STRUCTURE_DELETE";
+      | "ROLE_STRUCTURE_DELETE"
+      | "YOUTUBE_NOTIFICATIONS_PUBLISH";
     status: "success" | "failed";
     guildId: string;
     messageId: string | null;
@@ -584,6 +624,27 @@ function isDashboardTicketConfigPayload(
   );
 }
 
+function isDashboardYoutubeNotificationsConfigPayload(
+  value: unknown,
+): value is DashboardYoutubeNotificationsConfigPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Partial<DashboardYoutubeNotificationsConfigPayload>;
+  const config = payload.youtubeNotificationsConfig;
+
+  return (
+    payload.ok === true &&
+    payload.mode === "klarbot_youtube_notifications_config" &&
+    typeof payload.guildId === "string" &&
+    Boolean(config) &&
+    typeof config?.enabled === "boolean" &&
+    typeof config?.status === "string" &&
+    Array.isArray(config?.subscriptions)
+  );
+}
+
 function isDashboardGuildSnapshotPayload(
   value: unknown,
 ): value is DashboardGuildSnapshotPayload {
@@ -651,6 +712,7 @@ function isDashboardBotJobClaimPayload(
   const serverProfileConfig = job.payload?.serverProfileConfig;
   const serverStructureConfig = job.payload?.serverStructureConfig;
   const roleStructureConfig = job.payload?.roleStructureConfig;
+  const youtubeNotificationsConfig = job.payload?.youtubeNotificationsConfig;
 
   if (
     job.status !== "processing" ||
@@ -740,6 +802,13 @@ function isDashboardBotJobClaimPayload(
     return true;
   }
 
+  if (job.jobType === "YOUTUBE_NOTIFICATIONS_PUBLISH") {
+    return (
+      Boolean(youtubeNotificationsConfig) &&
+      Array.isArray(youtubeNotificationsConfig?.subscriptions)
+    );
+  }
+
   return false;
 }
 
@@ -763,7 +832,8 @@ function isDashboardBotJobCompletedPayload(
       payload.job?.jobType === "SERVER_STRUCTURE_APPLY" ||
       payload.job?.jobType === "SERVER_STRUCTURE_DELETE" ||
       payload.job?.jobType === "ROLE_STRUCTURE_APPLY" ||
-      payload.job?.jobType === "ROLE_STRUCTURE_DELETE") &&
+      payload.job?.jobType === "ROLE_STRUCTURE_DELETE" ||
+      payload.job?.jobType === "YOUTUBE_NOTIFICATIONS_PUBLISH") &&
     (payload.job.status === "success" || payload.job.status === "failed")
   );
 }
@@ -958,6 +1028,14 @@ export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClie
         `/api/bot/guilds/${encodeURIComponent(guildId)}/ticket-config`,
         isDashboardTicketConfigPayload,
         "Ticket-Konfiguration konnte nicht geladen werden.",
+        { requireEnabled: false },
+      );
+    },
+    async readYoutubeNotificationsConfig(guildId: string) {
+      return readInternal(
+        `/api/bot/guilds/${encodeURIComponent(guildId)}/youtube-notifications-config`,
+        isDashboardYoutubeNotificationsConfigPayload,
+        "YouTube-Konfiguration konnte nicht geladen werden.",
         { requireEnabled: false },
       );
     },

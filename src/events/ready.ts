@@ -8,6 +8,7 @@ import {
 import { startDashboardJobWorker } from "../features/dashboardSync/jobWorker.js";
 import { prepareDashboardSyncForGuilds } from "../features/dashboardSync/syncService.js";
 import { sendVerifyPanelForGuild } from "../features/verify/verifyPanelSync.js";
+import { startYoutubeNotificationWorker } from "../features/youtube/youtubeNotifications.js";
 import type { BotCommand } from "../types/command.js";
 import { logger } from "../utils/logger.js";
 
@@ -71,6 +72,7 @@ export function registerReadyEvent(options: RegisterReadyEventOptions) {
       await syncCommandsForGuilds(installedGuilds, commands);
       void prepareDashboardSyncForGuilds(installedGuilds, config);
       startDashboardJobWorker(readyClient, config);
+      startYoutubeNotificationWorker(readyClient, config);
 
       if (process.env.KLARBOT_SEND_VERIFY_TEST_PANEL === "true") {
         const targetGuildId =
