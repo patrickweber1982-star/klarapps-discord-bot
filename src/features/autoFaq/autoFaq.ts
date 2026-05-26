@@ -24,6 +24,34 @@ const configCache = new Map<
 >();
 const cooldowns = new Map<string, number>();
 
+async function reportAutoFaqEvent(
+  botConfig: BotConfig,
+  input: {
+    guildId: string;
+    faqRuleId: string;
+    messageId?: string | null;
+    channelId: string;
+    userId?: string | null;
+    eventType:
+      | "FAQ_TRIGGERED"
+      | "FAQ_DM_FAILED"
+      | "FAQ_DELETE_FAILED"
+      | "FAQ_COOLDOWN_BLOCKED"
+      | "FAQ_REPLY_FAILED";
+    success: boolean;
+    shortMessage?: string | null;
+  },
+) {
+  const syncClient = createDashboardSyncClient(botConfig);
+  const result = await syncClient.reportAutoFaqEvent(input);
+
+  if (!result.ok) {
+    logger.warn(
+      `[auto-faq] event report failed | guildId=${input.guildId} | rule=${input.faqRuleId} | event=${input.eventType} | reason=${result.message}`,
+    );
+  }
+}
+
 function readNumber(value: string, fallback: number) {
   const number = Number(value);
 
@@ -182,6 +210,12 @@ function hasSendableAnswer(rule: DashboardAutoFaqRuleConfig) {
 async function scheduleBotReplyDelete(
   sentMessage: Message | null,
   rule: DashboardAutoFaqRuleConfig,
+  botConfig: BotConfig,
+  context: {
+    guildId: string;
+    channelId: string;
+    userId: string;
+  },
 ) {
   const delaySeconds = Math.max(
     0,
@@ -195,11 +229,25 @@ async function scheduleBotReplyDelete(
       logger.warn(
         `[auto-faq] bot reply delete failed | messageId=${sentMessage.id} | error=${error instanceof Error ? error.message : String(error)}`,
       );
+      void reportAutoFaqEvent(botConfig, {
+        guildId: context.guildId,
+        faqRuleId: rule.id,
+        messageId: sentMessage.id,
+        channelId: context.channelId,
+        userId: context.userId,
+        eventType: "FAQ_DELETE_FAILED",
+        success: false,
+        shortMessage: error instanceof Error ? error.message : String(error),
+      });
     });
   }, delaySeconds * 1000).unref?.();
 }
 
-async function deleteOriginalMessage(message: Message, rule: DashboardAutoFaqRuleConfig) {
+async function deleteOriginalMessage(
+  message: Message,
+  rule: DashboardAutoFaqRuleConfig,
+  botConfig: BotConfig,
+) {
   if (!rule.deleteUserMessage) return;
 
   try {
@@ -209,6 +257,16 @@ async function deleteOriginalMessage(message: Message, rule: DashboardAutoFaqRul
       logger.warn(
         `[auto-faq] user message delete skipped | guildId=${message.guildId} | channelId=${message.channelId} | reason=missing_manage_messages`,
       );
+      await reportAutoFaqEvent(botConfig, {
+        guildId: message.guildId ?? "",
+        faqRuleId: rule.id,
+        messageId: message.id,
+        channelId: message.channelId,
+        userId: message.author.id,
+        eventType: "FAQ_DELETE_FAILED",
+        success: false,
+        shortMessage: "missing_manage_messages",
+      });
       return;
     }
 
@@ -222,12 +280,23 @@ async function deleteOriginalMessage(message: Message, rule: DashboardAutoFaqRul
     logger.warn(
       `[auto-faq] user message delete failed | guildId=${message.guildId} | channelId=${message.channelId} | rule=${rule.id} | error=${error instanceof Error ? error.message : String(error)}`,
     );
+    await reportAutoFaqEvent(botConfig, {
+      guildId: message.guildId ?? "",
+      faqRuleId: rule.id,
+      messageId: message.id,
+      channelId: message.channelId,
+      userId: message.author.id,
+      eventType: "FAQ_DELETE_FAILED",
+      success: false,
+      shortMessage: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
 async function sendAutoFaqReply(
   message: Message,
   rule: DashboardAutoFaqRuleConfig,
+  botConfig: BotConfig,
 ) {
   if (!hasSendableAnswer(rule)) return null;
 
@@ -249,6 +318,16 @@ async function sendAutoFaqReply(
       logger.warn(
         `[auto-faq] dm failed | guildId=${message.guildId} | userId=${message.author.id} | rule=${rule.id} | error=${error instanceof Error ? error.message : String(error)}`,
       );
+      void reportAutoFaqEvent(botConfig, {
+        guildId: message.guildId ?? "",
+        faqRuleId: rule.id,
+        messageId: message.id,
+        channelId: message.channelId,
+        userId: message.author.id,
+        eventType: "FAQ_DM_FAILED",
+        success: false,
+        shortMessage: error instanceof Error ? error.message : String(error),
+      });
       return null;
     });
 
@@ -314,20 +393,65 @@ export function registerAutoFaqMessageCreateEvent(
       (await message.guild.members.fetch(message.author.id).catch(() => null));
 
     for (const rule of config.rules) {
+      const matchesBase =
+        rule.enabled &&
+        ruleMatchesChannel(rule, message) &&
+        !memberHasIgnoredRole(member, rule.ignoredRoleIds) &&
+        ruleMatchesContent(rule, message.content ?? "");
+
+      if (matchesBase && isOnCooldown(message.guildId, message.author.id, rule)) {
+        await reportAutoFaqEvent(botConfig, {
+          guildId: message.guildId,
+          faqRuleId: rule.id,
+          messageId: message.id,
+          channelId: message.channelId,
+          userId: message.author.id,
+          eventType: "FAQ_COOLDOWN_BLOCKED",
+          success: true,
+          shortMessage: "cooldown",
+        });
+        return;
+      }
+
       if (
-        !rule.enabled ||
-        !ruleMatchesChannel(rule, message) ||
-        memberHasIgnoredRole(member, rule.ignoredRoleIds) ||
-        !ruleMatchesContent(rule, message.content ?? "") ||
-        isOnCooldown(message.guildId, message.author.id, rule)
+        !matchesBase
       ) {
         continue;
       }
 
       try {
-        const sentMessage = await sendAutoFaqReply(message, rule);
-        await scheduleBotReplyDelete(sentMessage, rule);
-        await deleteOriginalMessage(message, rule);
+        const sentMessage = await sendAutoFaqReply(message, rule, botConfig);
+
+        if (sentMessage) {
+          await reportAutoFaqEvent(botConfig, {
+            guildId: message.guildId,
+            faqRuleId: rule.id,
+            messageId: sentMessage.id,
+            channelId: message.channelId,
+            userId: message.author.id,
+            eventType: "FAQ_TRIGGERED",
+            success: true,
+            shortMessage: rule.answerMode,
+          });
+        } else {
+          await reportAutoFaqEvent(botConfig, {
+            guildId: message.guildId,
+            faqRuleId: rule.id,
+            messageId: message.id,
+            channelId: message.channelId,
+            userId: message.author.id,
+            eventType: "FAQ_REPLY_FAILED",
+            success: false,
+            shortMessage: "no_message_sent",
+          });
+        }
+
+        await scheduleBotReplyDelete(sentMessage, rule, botConfig, {
+          guildId: message.guildId,
+          channelId: message.channelId,
+          userId: message.author.id,
+        });
+        await deleteOriginalMessage(message, rule, botConfig);
 
         logger.info(
           `[auto-faq] reply ${sentMessage ? "sent" : "skipped"} | guildId=${message.guildId} | channelId=${message.channelId} | rule=${rule.id} | mode=${rule.answerMode} | dm=${rule.dmResponse ? "true" : "false"}`,
@@ -336,6 +460,16 @@ export function registerAutoFaqMessageCreateEvent(
         logger.warn(
           `[auto-faq] reply failed | guildId=${message.guildId} | channelId=${message.channelId} | rule=${rule.id} | error=${error instanceof Error ? error.message : String(error)}`,
         );
+        await reportAutoFaqEvent(botConfig, {
+          guildId: message.guildId,
+          faqRuleId: rule.id,
+          messageId: message.id,
+          channelId: message.channelId,
+          userId: message.author.id,
+          eventType: "FAQ_REPLY_FAILED",
+          success: false,
+          shortMessage: error instanceof Error ? error.message : String(error),
+        });
       }
 
       return;

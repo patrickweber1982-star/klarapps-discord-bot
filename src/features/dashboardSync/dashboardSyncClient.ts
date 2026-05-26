@@ -29,6 +29,9 @@ export type DashboardSyncClient = {
   readAutoFaqConfig(
     guildId: string,
   ): Promise<DashboardInternalReadResult<DashboardAutoFaqConfigPayload>>;
+  readStatsChannelsConfig(
+    guildId: string,
+  ): Promise<DashboardInternalReadResult<DashboardStatsChannelsConfigPayload>>;
   readYoutubeNotificationsConfig(
     guildId: string,
   ): Promise<DashboardInternalReadResult<DashboardYoutubeNotificationsConfigPayload>>;
@@ -55,6 +58,9 @@ export type DashboardSyncClient = {
   >;
   reportTicketEvent(input: DashboardTicketEventInput): Promise<
     DashboardInternalReadResult<DashboardTicketEventPayload>
+  >;
+  reportAutoFaqEvent(input: DashboardAutoFaqEventInput): Promise<
+    DashboardInternalReadResult<DashboardAutoFaqEventPayload>
   >;
   claimNextBotJob(): Promise<
     DashboardInternalReadResult<DashboardBotJobClaimPayload>
@@ -169,6 +175,35 @@ type DashboardTicketEventPayload = {
     channelId: string;
     status: "OPEN" | "CLOSED" | "ARCHIVED";
     updatedAt: string | Date;
+  };
+};
+
+type DashboardAutoFaqEventInput = {
+  guildId: string;
+  faqRuleId: string;
+  messageId?: string | null;
+  channelId: string;
+  userId?: string | null;
+  eventType:
+    | "FAQ_TRIGGERED"
+    | "FAQ_DM_FAILED"
+    | "FAQ_DELETE_FAILED"
+    | "FAQ_COOLDOWN_BLOCKED"
+    | "FAQ_REPLY_FAILED";
+  success: boolean;
+  shortMessage?: string | null;
+};
+
+type DashboardAutoFaqEventPayload = {
+  ok: true;
+  mode: "klarbot_auto_faq_event";
+  event: {
+    id: string;
+    guildId: string;
+    faqRuleId: string;
+    eventType: string;
+    success: boolean;
+    createdAt: string | Date;
   };
 };
 
@@ -433,6 +468,12 @@ export type DashboardAutoFaqRuleConfig = {
   channelIds: string[];
   ignoredRoleIds: string[];
   cooldownSeconds: string;
+  triggerCount: number;
+  successCount: number;
+  errorCount: number;
+  lastTriggeredAt: string;
+  lastTriggeredChannelId: string;
+  lastTriggeredUserId: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -454,6 +495,55 @@ export type DashboardAutoFaqConfigPayload = {
 export type DashboardAutoFaqConfig =
   DashboardAutoFaqConfigPayload["autoFaqConfig"];
 
+export type DashboardStatsChannelType =
+  | "MEMBERS_TOTAL"
+  | "MEMBERS_ONLINE"
+  | "BOTS_TOTAL"
+  | "ROLES_TOTAL"
+  | "CHANNELS_TOTAL"
+  | "BOOSTS_TOTAL";
+
+export type DashboardStatsCategoryConfig = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  visibleRoleId: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DashboardStatsChannelConfig = {
+  id: string;
+  categoryId: string;
+  type: DashboardStatsChannelType;
+  label: string;
+  emoji: string;
+  discordChannelId: string;
+  enabled: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DashboardStatsChannelsConfigPayload = {
+  ok: true;
+  mode: "klarbot_stats_channels_config";
+  guildId: string;
+  statsChannelsConfig: {
+    guildId: string;
+    enabled: boolean;
+    status: string;
+    publishedAt: string;
+    updateIntervalMinutes: string;
+    categories: DashboardStatsCategoryConfig[];
+    channels: DashboardStatsChannelConfig[];
+    updatedAt: string;
+  };
+};
+
+export type DashboardStatsChannelsConfig =
+  DashboardStatsChannelsConfigPayload["statsChannelsConfig"];
+
 type DashboardBotJob = {
   id: string;
   jobType:
@@ -469,7 +559,8 @@ type DashboardBotJob = {
     | "YOUTUBE_NOTIFICATIONS_PUBLISH"
     | "YOUTUBE_NOTIFICATION_TEST"
     | "AUTO_DELETE_PUBLISH"
-    | "AUTO_FAQ_PUBLISH";
+    | "AUTO_FAQ_PUBLISH"
+    | "STATS_CHANNELS_PUBLISH";
   status: "processing";
   guildId: string;
   moduleSlug: string | null;
@@ -488,6 +579,7 @@ type DashboardBotJob = {
     youtubeTestSubscription?: DashboardYoutubeSubscriptionConfig;
     autoDeleteConfig?: DashboardAutoDeleteConfig;
     autoFaqConfig?: DashboardAutoFaqConfig;
+    statsChannelsConfig?: DashboardStatsChannelsConfig;
     guildName?: string;
   };
   attempts: number;
@@ -517,7 +609,8 @@ type DashboardBotJobCompletedPayload = {
       | "YOUTUBE_NOTIFICATIONS_PUBLISH"
       | "YOUTUBE_NOTIFICATION_TEST"
       | "AUTO_DELETE_PUBLISH"
-      | "AUTO_FAQ_PUBLISH";
+      | "AUTO_FAQ_PUBLISH"
+      | "STATS_CHANNELS_PUBLISH";
     status: "success" | "failed";
     guildId: string;
     messageId: string | null;
@@ -793,6 +886,29 @@ function isDashboardAutoFaqConfigPayload(
   );
 }
 
+function isDashboardStatsChannelsConfigPayload(
+  value: unknown,
+): value is DashboardStatsChannelsConfigPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Partial<DashboardStatsChannelsConfigPayload>;
+  const config = payload.statsChannelsConfig;
+
+  return (
+    payload.ok === true &&
+    payload.mode === "klarbot_stats_channels_config" &&
+    typeof payload.guildId === "string" &&
+    Boolean(config) &&
+    typeof config?.enabled === "boolean" &&
+    typeof config?.status === "string" &&
+    typeof config?.updateIntervalMinutes === "string" &&
+    Array.isArray(config?.categories) &&
+    Array.isArray(config?.channels)
+  );
+}
+
 function isDashboardGuildSnapshotPayload(
   value: unknown,
 ): value is DashboardGuildSnapshotPayload {
@@ -831,6 +947,25 @@ function isDashboardTicketEventPayload(
   );
 }
 
+function isDashboardAutoFaqEventPayload(
+  value: unknown,
+): value is DashboardAutoFaqEventPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Partial<DashboardAutoFaqEventPayload>;
+
+  return (
+    payload.ok === true &&
+    payload.mode === "klarbot_auto_faq_event" &&
+    typeof payload.event?.guildId === "string" &&
+    typeof payload.event?.faqRuleId === "string" &&
+    typeof payload.event?.eventType === "string" &&
+    typeof payload.event?.success === "boolean"
+  );
+}
+
 function isDashboardBotJobClaimPayload(
   value: unknown,
 ): value is DashboardBotJobClaimPayload {
@@ -864,6 +999,7 @@ function isDashboardBotJobClaimPayload(
   const youtubeTestSubscription = job.payload?.youtubeTestSubscription;
   const autoDeleteConfig = job.payload?.autoDeleteConfig;
   const autoFaqConfig = job.payload?.autoFaqConfig;
+  const statsChannelsConfig = job.payload?.statsChannelsConfig;
 
   if (
     job.status !== "processing" ||
@@ -976,6 +1112,14 @@ function isDashboardBotJobClaimPayload(
     return Boolean(autoFaqConfig) && Array.isArray(autoFaqConfig?.rules);
   }
 
+  if (job.jobType === "STATS_CHANNELS_PUBLISH") {
+    return (
+      Boolean(statsChannelsConfig) &&
+      Array.isArray(statsChannelsConfig?.categories) &&
+      Array.isArray(statsChannelsConfig?.channels)
+    );
+  }
+
   return false;
 }
 
@@ -1003,7 +1147,8 @@ function isDashboardBotJobCompletedPayload(
       payload.job?.jobType === "YOUTUBE_NOTIFICATIONS_PUBLISH" ||
       payload.job?.jobType === "YOUTUBE_NOTIFICATION_TEST" ||
       payload.job?.jobType === "AUTO_DELETE_PUBLISH" ||
-      payload.job?.jobType === "AUTO_FAQ_PUBLISH") &&
+      payload.job?.jobType === "AUTO_FAQ_PUBLISH" ||
+      payload.job?.jobType === "STATS_CHANNELS_PUBLISH") &&
     (payload.job.status === "success" || payload.job.status === "failed")
   );
 }
@@ -1217,6 +1362,14 @@ export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClie
         { requireEnabled: false },
       );
     },
+    async readStatsChannelsConfig(guildId: string) {
+      return readInternal(
+        `/api/bot/guilds/${encodeURIComponent(guildId)}/stats-channels-config`,
+        isDashboardStatsChannelsConfigPayload,
+        "Statistik-Kanaele-Konfiguration konnte nicht geladen werden.",
+        { requireEnabled: false },
+      );
+    },
     async readYoutubeNotificationsConfig(guildId: string) {
       return readInternal(
         `/api/bot/guilds/${encodeURIComponent(guildId)}/youtube-notifications-config`,
@@ -1311,6 +1464,23 @@ export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClie
         },
         isDashboardTicketEventPayload,
         "Dashboard-Sync konnte das Ticket-Event nicht speichern.",
+      );
+    },
+    async reportAutoFaqEvent(input) {
+      return postInternal(
+        "/api/bot/auto-faq/events",
+        {
+          guildId: input.guildId,
+          faqRuleId: input.faqRuleId,
+          messageId: input.messageId ?? null,
+          channelId: input.channelId,
+          userId: input.userId ?? null,
+          eventType: input.eventType,
+          success: input.success,
+          shortMessage: input.shortMessage ?? null,
+        },
+        isDashboardAutoFaqEventPayload,
+        "Dashboard-Sync konnte das Auto-FAQ-Event nicht speichern.",
       );
     },
     async claimNextBotJob() {

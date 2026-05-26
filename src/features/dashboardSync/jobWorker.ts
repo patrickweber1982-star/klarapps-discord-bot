@@ -16,6 +16,7 @@ import {
   applyServerStructureForGuild,
   deleteServerStructureForGuild,
 } from "../serverStructure/serverStructureApply.js";
+import { publishStatsChannelsForGuild } from "../statsChannels/statsChannels.js";
 import { publishVerifyPanelForGuild } from "../verify/verifyPanelSync.js";
 import {
   publishYoutubeNotificationsForGuild,
@@ -162,6 +163,13 @@ async function processNextJob(client: Client, config: BotConfig) {
                 job.guildId,
                 job.payload.autoFaqConfig,
               )
+          : job.jobType === "STATS_CHANNELS_PUBLISH" &&
+              job.payload.statsChannelsConfig
+            ? await publishStatsChannelsForGuild(
+                client,
+                job.guildId,
+                job.payload.statsChannelsConfig,
+              )
           : {
               ok: false as const,
               reason: "unsupported_job_payload",
@@ -183,6 +191,9 @@ async function processNextJob(client: Client, config: BotConfig) {
       result: {
         channelId: publishResult.channelId,
         messageId: readPublishMessageId(publishResult),
+        ...("statsChannelsConfig" in publishResult
+          ? { statsChannelsConfig: publishResult.statsChannelsConfig }
+          : {}),
       },
     });
 
