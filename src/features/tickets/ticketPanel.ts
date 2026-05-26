@@ -15,6 +15,7 @@ export const ticketPanelButtonId = "ticket:open";
 export const ticketPanelButtonPrefix = "ticket:open:";
 export const ticketCloseRequestButtonId = "ticket:close:request";
 export const ticketCloseConfirmButtonId = "ticket:close:confirm";
+export const ticketClaimButtonId = "ticket:claim";
 export const ticketTopicPrefix = "klarbot-ticket";
 
 export function ticketPanelButtonIdForType(ticketTypeId: string) {

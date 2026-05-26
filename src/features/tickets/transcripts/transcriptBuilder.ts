@@ -98,5 +98,5 @@ function buildTranscriptFileName(channelName: string, exportedAt: Date) {
     .replace(/^-|-$/g, "")
     .toLowerCase();
 
-  return `${safeChannelName || "ticket"}-${datePart}.md`;
+  return `${safeChannelName || "ticket"}-${datePart}.txt`;
 }

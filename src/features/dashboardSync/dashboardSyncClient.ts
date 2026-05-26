@@ -44,6 +44,9 @@ export type DashboardSyncClient = {
   reportGuildSnapshot(input: DashboardGuildSnapshotInput): Promise<
     DashboardInternalReadResult<DashboardGuildSnapshotPayload>
   >;
+  reportTicketEvent(input: DashboardTicketEventInput): Promise<
+    DashboardInternalReadResult<DashboardTicketEventPayload>
+  >;
   claimNextBotJob(): Promise<
     DashboardInternalReadResult<DashboardBotJobClaimPayload>
   >;
@@ -126,6 +129,40 @@ type DashboardGuildSnapshotPayload = {
   };
 };
 
+type DashboardTicketEventInput = {
+  guildId: string;
+  channelId: string;
+  channelName: string;
+  ticketTypeId?: string | null;
+  ticketTypeName?: string | null;
+  creatorId: string;
+  creatorName?: string | null;
+  status: "OPEN" | "CLOSED" | "ARCHIVED";
+  openedAt?: string | null;
+  closedAt?: string | null;
+  archivedAt?: string | null;
+  claimedAt?: string | null;
+  claimedById?: string | null;
+  claimedByName?: string | null;
+  closedById?: string | null;
+  closedByName?: string | null;
+  priority?: "LOW" | "NORMAL" | "HIGH" | "URGENT";
+  internalNote?: string | null;
+  transcriptFileName?: string | null;
+};
+
+type DashboardTicketEventPayload = {
+  ok: true;
+  mode: "klarbot_ticket_event";
+  ticket: {
+    id: string;
+    guildId: string;
+    channelId: string;
+    status: "OPEN" | "CLOSED" | "ARCHIVED";
+    updatedAt: string | Date;
+  };
+};
+
 export type DashboardVerifyConfigPayload = {
   ok: true;
   mode: "klarbot_verify_config";
@@ -190,6 +227,7 @@ export type DashboardTicketTypeConfig = {
   ticketCategoryId: string;
   supportRoleId: string;
   embedColor: string;
+  autoReply: string;
 };
 
 export type DashboardTicketConfigPayload = {
@@ -201,12 +239,17 @@ export type DashboardTicketConfigPayload = {
     enabled: boolean;
     status: string;
     panelChannelId: string;
+    logChannelId: string;
     ticketCategoryId: string;
     supportRoleId: string;
     panelTitle: string;
     panelDescription: string;
     buttonLabel: string;
     embedColor: string;
+    closeMode: "delete" | "archive";
+    archiveCategoryId: string;
+    autoCloseAfterDays?: string;
+    reminderAfterDays?: string;
     ticketTypes: DashboardTicketTypeConfig[];
     publishedMessageId?: string;
     publishedAt?: string;
@@ -528,12 +571,15 @@ function isDashboardTicketConfigPayload(
     typeof config?.enabled === "boolean" &&
     typeof config?.status === "string" &&
     typeof config?.panelChannelId === "string" &&
+    typeof config?.logChannelId === "string" &&
     typeof config?.ticketCategoryId === "string" &&
     typeof config?.supportRoleId === "string" &&
     typeof config?.panelTitle === "string" &&
     typeof config?.panelDescription === "string" &&
     typeof config?.buttonLabel === "string" &&
     typeof config?.embedColor === "string" &&
+    (config?.closeMode === "delete" || config?.closeMode === "archive") &&
+    typeof config?.archiveCategoryId === "string" &&
     Array.isArray(config?.ticketTypes)
   );
 }
@@ -553,6 +599,26 @@ function isDashboardGuildSnapshotPayload(
     typeof payload.guildId === "string" &&
     typeof payload.synced?.channels === "number" &&
     typeof payload.synced?.roles === "number"
+  );
+}
+
+function isDashboardTicketEventPayload(
+  value: unknown,
+): value is DashboardTicketEventPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Partial<DashboardTicketEventPayload>;
+
+  return (
+    payload.ok === true &&
+    payload.mode === "klarbot_ticket_event" &&
+    typeof payload.ticket?.guildId === "string" &&
+    typeof payload.ticket?.channelId === "string" &&
+    (payload.ticket?.status === "OPEN" ||
+      payload.ticket?.status === "CLOSED" ||
+      payload.ticket?.status === "ARCHIVED")
   );
 }
 
@@ -610,11 +676,15 @@ function isDashboardBotJobClaimPayload(
     return (
       Boolean(ticketConfig) &&
       typeof ticketConfig?.panelChannelId === "string" &&
+      typeof ticketConfig?.logChannelId === "string" &&
       typeof ticketConfig?.ticketCategoryId === "string" &&
       typeof ticketConfig?.supportRoleId === "string" &&
       typeof ticketConfig?.panelTitle === "string" &&
       typeof ticketConfig?.panelDescription === "string" &&
       typeof ticketConfig?.buttonLabel === "string" &&
+      (ticketConfig?.closeMode === "delete" ||
+        ticketConfig?.closeMode === "archive") &&
+      typeof ticketConfig?.archiveCategoryId === "string" &&
       Array.isArray(ticketConfig?.ticketTypes)
     );
   }
@@ -949,6 +1019,34 @@ export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClie
         },
         isDashboardGuildSnapshotPayload,
         "Dashboard-Sync konnte den Guild-Snapshot nicht speichern.",
+      );
+    },
+    async reportTicketEvent(input) {
+      return postInternal(
+        "/api/bot/tickets/events",
+        {
+          guildId: input.guildId,
+          channelId: input.channelId,
+          channelName: input.channelName,
+          ticketTypeId: input.ticketTypeId ?? null,
+          ticketTypeName: input.ticketTypeName ?? null,
+          creatorId: input.creatorId,
+          creatorName: input.creatorName ?? null,
+          status: input.status,
+          openedAt: input.openedAt ?? null,
+          closedAt: input.closedAt ?? null,
+          archivedAt: input.archivedAt ?? null,
+          claimedAt: input.claimedAt ?? null,
+          claimedById: input.claimedById ?? null,
+          claimedByName: input.claimedByName ?? null,
+          closedById: input.closedById ?? null,
+          closedByName: input.closedByName ?? null,
+          priority: input.priority ?? "NORMAL",
+          internalNote: input.internalNote ?? null,
+          transcriptFileName: input.transcriptFileName ?? null,
+        },
+        isDashboardTicketEventPayload,
+        "Dashboard-Sync konnte das Ticket-Event nicht speichern.",
       );
     },
     async claimNextBotJob() {
