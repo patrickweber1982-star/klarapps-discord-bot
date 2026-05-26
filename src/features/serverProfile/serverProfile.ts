@@ -4,6 +4,8 @@ import type { DashboardServerProfileConfig } from "../dashboardSync/dashboardSyn
 import { logger } from "../../utils/logger.js";
 
 const serverProfileImageMaxBytes = 10 * 1024 * 1024;
+const serverProfileReason =
+  "KlarApps Dashboard serverbezogenes Serverprofil";
 
 function normalizeNickname(value: string) {
   const trimmed = value.trim();
@@ -57,6 +59,54 @@ async function imageUrlToDataUri(
   return `data:${contentType};base64,${buffer.toString("base64")}`;
 }
 
+function readErrorRecord(value: unknown) {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function formatDiscordApiError(error: unknown) {
+  const record = readErrorRecord(error);
+  const rawError = readErrorRecord(record.rawError);
+  const errors = rawError.errors ?? record.errors;
+  const message =
+    typeof rawError.message === "string"
+      ? rawError.message
+      : error instanceof Error
+        ? error.message
+        : String(error);
+  const code =
+    typeof rawError.code === "number" || typeof rawError.code === "string"
+      ? rawError.code
+      : record.code;
+  const status =
+    typeof record.status === "number" || typeof record.status === "string"
+      ? record.status
+      : undefined;
+  const details = errors ? ` | errors=${JSON.stringify(errors)}` : "";
+
+  return {
+    message,
+    logMessage: `status=${status ?? "unknown"} | code=${code ?? "unknown"} | message=${message}${details}`,
+  };
+}
+
+async function patchCurrentMemberProfile(
+  client: Client,
+  guildId: string,
+  body: Record<string, string | null>,
+  label: string,
+) {
+  logger.info(
+    `[server-profile] patch ${label} | guildId=${guildId} | fields=${Object.keys(body).join(",")}`,
+  );
+
+  await client.rest.patch(`/guilds/${guildId}/members/@me`, {
+    body,
+    reason: serverProfileReason,
+  });
+}
+
 export async function applyServerProfileForGuild(
   client: Client,
   guildId: string,
@@ -106,8 +156,11 @@ export async function applyServerProfileForGuild(
     };
   }
 
+  let avatar: string | null = null;
+  let banner: string | null = null;
+
   try {
-    const [avatar, banner] = await Promise.all([
+    [avatar, banner] = await Promise.all([
       avatarImageUrl
         ? imageUrlToDataUri(avatarImageUrl, "avatar", guildId)
         : Promise.resolve(null),
@@ -116,14 +169,55 @@ export async function applyServerProfileForGuild(
         : Promise.resolve(null),
     ]);
 
-    await client.rest.patch(`/guilds/${guildId}/members/@me`, {
-      body: {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    logger.warn(
+      `[server-profile] image preparation failed | guildId=${guildId} | reason=${message}`,
+    );
+
+    return {
+      ok: false as const,
+      reason: message,
+    };
+  }
+
+  try {
+    await patchCurrentMemberProfile(
+      client,
+      guildId,
+      {
         nick: nickname,
         avatar,
-        banner,
       },
-      reason: "KlarApps Dashboard serverbezogenes Serverprofil",
-    });
+      "nickname_avatar",
+    );
+  } catch (error) {
+    const details = formatDiscordApiError(error);
+
+    logger.warn(
+      `[server-profile] nickname/avatar apply failed | guildId=${guildId} | ${details.logMessage}`,
+    );
+
+    return {
+      ok: false as const,
+      reason: details.message.includes("Missing Permissions")
+        ? "Bot hat keine Berechtigung, Nickname oder Profilbild zu aendern."
+        : `Nickname/Profilbild konnte nicht angewendet werden: ${details.message}`,
+    };
+  }
+
+  try {
+    if (bannerImageUrl) {
+      await patchCurrentMemberProfile(
+        client,
+        guildId,
+        {
+          banner,
+        },
+        "banner",
+      );
+    }
 
     logger.success(
       `[server-profile] profile applied | guildId=${guildId} | nicknameSet=${nickname ? "true" : "false"} | avatarSet=${avatar ? "true" : "false"} | bannerSet=${banner ? "true" : "false"}`,
@@ -137,17 +231,15 @@ export async function applyServerProfileForGuild(
       bannerApplied: Boolean(banner),
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const details = formatDiscordApiError(error);
 
     logger.warn(
-      `[server-profile] apply failed | guildId=${guildId} | reason=${message}`,
+      `[server-profile] banner apply failed | guildId=${guildId} | bannerSet=${banner ? "true" : "false"} | ${details.logMessage}`,
     );
 
     return {
       ok: false as const,
-      reason: message.includes("Missing Permissions")
-        ? "missing_permissions"
-        : "nickname_apply_failed",
+      reason: `Banner konnte nicht angewendet werden: ${details.message}`,
     };
   }
 }
