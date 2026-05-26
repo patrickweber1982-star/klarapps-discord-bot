@@ -15,7 +15,10 @@ import {
   deleteServerStructureForGuild,
 } from "../serverStructure/serverStructureApply.js";
 import { publishVerifyPanelForGuild } from "../verify/verifyPanelSync.js";
-import { publishYoutubeNotificationsForGuild } from "../youtube/youtubeNotifications.js";
+import {
+  publishYoutubeNotificationsForGuild,
+  sendYoutubeTestNotificationForGuild,
+} from "../youtube/youtubeNotifications.js";
 import { createDashboardSyncClient } from "./dashboardSyncClient.js";
 
 let workerStarted = false;
@@ -137,6 +140,13 @@ async function processNextJob(client: Client, config: BotConfig) {
                 client,
                 job.guildId,
                 job.payload.youtubeNotificationsConfig,
+              )
+          : job.jobType === "YOUTUBE_NOTIFICATION_TEST" &&
+              job.payload.youtubeTestSubscription
+            ? await sendYoutubeTestNotificationForGuild(
+                client,
+                job.guildId,
+                job.payload.youtubeTestSubscription,
               )
           : {
               ok: false as const,

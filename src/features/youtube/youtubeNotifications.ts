@@ -329,6 +329,56 @@ export async function publishYoutubeNotificationsForGuild(
   };
 }
 
+export async function sendYoutubeTestNotificationForGuild(
+  client: Client,
+  guildId: string,
+  subscription: DashboardYoutubeSubscriptionConfig,
+) {
+  logger.info(
+    `[youtube] test notification received | guildId=${guildId} | subscription=${subscription.id} | targetChannelId=${subscription.targetChannelId || "none"}`,
+  );
+
+  const guild = await client.guilds.fetch(guildId).catch(() => null);
+
+  if (!guild) {
+    return {
+      ok: false as const,
+      reason: "guild_not_found",
+    };
+  }
+
+  if (!subscription.targetChannelId) {
+    return {
+      ok: false as const,
+      reason: "no_target_channel",
+    };
+  }
+
+  const sent = await sendNotification(client, guildId, subscription, {
+    videoId: "klarbot-test",
+    title: "Testvideo von KlarBot",
+    url: "https://www.youtube.com/",
+    publishedAt: new Date().toISOString(),
+    isLivestream: false,
+  });
+
+  if (!sent) {
+    return {
+      ok: false as const,
+      reason: "test_notification_not_sent",
+    };
+  }
+
+  logger.success(
+    `[youtube] youtube test notification sent | guildId=${guildId} | subscription=${subscription.id}`,
+  );
+
+  return {
+    ok: true as const,
+    channelId: subscription.targetChannelId,
+  };
+}
+
 async function processGuild(client: Client, config: BotConfig, guildId: string) {
   const syncClient = createDashboardSyncClient(config);
   const result = await syncClient.readYoutubeNotificationsConfig(guildId);

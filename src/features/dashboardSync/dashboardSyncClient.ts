@@ -373,7 +373,8 @@ type DashboardBotJob = {
     | "SERVER_STRUCTURE_DELETE"
     | "ROLE_STRUCTURE_APPLY"
     | "ROLE_STRUCTURE_DELETE"
-    | "YOUTUBE_NOTIFICATIONS_PUBLISH";
+    | "YOUTUBE_NOTIFICATIONS_PUBLISH"
+    | "YOUTUBE_NOTIFICATION_TEST";
   status: "processing";
   guildId: string;
   moduleSlug: string | null;
@@ -389,6 +390,7 @@ type DashboardBotJob = {
     serverStructureConfig?: DashboardServerStructureConfig;
     roleStructureConfig?: DashboardRoleStructureConfig;
     youtubeNotificationsConfig?: DashboardYoutubeNotificationsConfig;
+    youtubeTestSubscription?: DashboardYoutubeSubscriptionConfig;
     guildName?: string;
   };
   attempts: number;
@@ -415,7 +417,8 @@ type DashboardBotJobCompletedPayload = {
       | "SERVER_STRUCTURE_DELETE"
       | "ROLE_STRUCTURE_APPLY"
       | "ROLE_STRUCTURE_DELETE"
-      | "YOUTUBE_NOTIFICATIONS_PUBLISH";
+      | "YOUTUBE_NOTIFICATIONS_PUBLISH"
+      | "YOUTUBE_NOTIFICATION_TEST";
     status: "success" | "failed";
     guildId: string;
     messageId: string | null;
@@ -713,6 +716,7 @@ function isDashboardBotJobClaimPayload(
   const serverStructureConfig = job.payload?.serverStructureConfig;
   const roleStructureConfig = job.payload?.roleStructureConfig;
   const youtubeNotificationsConfig = job.payload?.youtubeNotificationsConfig;
+  const youtubeTestSubscription = job.payload?.youtubeTestSubscription;
 
   if (
     job.status !== "processing" ||
@@ -809,6 +813,14 @@ function isDashboardBotJobClaimPayload(
     );
   }
 
+  if (job.jobType === "YOUTUBE_NOTIFICATION_TEST") {
+    return (
+      Boolean(youtubeTestSubscription) &&
+      typeof youtubeTestSubscription?.targetChannelId === "string" &&
+      typeof youtubeTestSubscription?.videoMessage === "string"
+    );
+  }
+
   return false;
 }
 
@@ -833,7 +845,8 @@ function isDashboardBotJobCompletedPayload(
       payload.job?.jobType === "SERVER_STRUCTURE_DELETE" ||
       payload.job?.jobType === "ROLE_STRUCTURE_APPLY" ||
       payload.job?.jobType === "ROLE_STRUCTURE_DELETE" ||
-      payload.job?.jobType === "YOUTUBE_NOTIFICATIONS_PUBLISH") &&
+      payload.job?.jobType === "YOUTUBE_NOTIFICATIONS_PUBLISH" ||
+      payload.job?.jobType === "YOUTUBE_NOTIFICATION_TEST") &&
     (payload.job.status === "success" || payload.job.status === "failed")
   );
 }
