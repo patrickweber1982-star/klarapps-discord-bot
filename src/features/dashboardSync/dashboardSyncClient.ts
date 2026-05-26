@@ -207,13 +207,32 @@ export type DashboardServerProfileConfig = {
   lastAppliedAt?: string;
 };
 
+export type DashboardServerStructureChannelConfig = {
+  id: string;
+  name: string;
+  type: "text" | "voice";
+};
+
+export type DashboardServerStructureCategoryConfig = {
+  id: string;
+  name: string;
+  channels: DashboardServerStructureChannelConfig[];
+};
+
+export type DashboardServerStructureConfig = {
+  categories: DashboardServerStructureCategoryConfig[];
+  enabled?: boolean;
+  publishedAt?: string;
+};
+
 type DashboardBotJob = {
   id: string;
   jobType:
     | "VERIFY_PUBLISH"
     | "JOIN_MESSAGE_PUBLISH"
     | "INFO_PUBLISH"
-    | "SERVER_PROFILE_APPLY";
+    | "SERVER_PROFILE_APPLY"
+    | "SERVER_STRUCTURE_APPLY";
   status: "processing";
   guildId: string;
   moduleSlug: string | null;
@@ -225,6 +244,7 @@ type DashboardBotJob = {
     joinMessageConfig?: DashboardJoinMessageConfig;
     infoConfig?: DashboardInfoConfig;
     serverProfileConfig?: DashboardServerProfileConfig;
+    serverStructureConfig?: DashboardServerStructureConfig;
     guildName?: string;
   };
   attempts: number;
@@ -245,7 +265,8 @@ type DashboardBotJobCompletedPayload = {
       | "VERIFY_PUBLISH"
       | "JOIN_MESSAGE_PUBLISH"
       | "INFO_PUBLISH"
-      | "SERVER_PROFILE_APPLY";
+      | "SERVER_PROFILE_APPLY"
+      | "SERVER_STRUCTURE_APPLY";
     status: "success" | "failed";
     guildId: string;
     messageId: string | null;
@@ -467,6 +488,7 @@ function isDashboardBotJobClaimPayload(
   const joinMessageConfig = job.payload?.joinMessageConfig;
   const infoConfig = job.payload?.infoConfig;
   const serverProfileConfig = job.payload?.serverProfileConfig;
+  const serverStructureConfig = job.payload?.serverStructureConfig;
 
   if (
     job.status !== "processing" ||
@@ -517,6 +539,13 @@ function isDashboardBotJobClaimPayload(
     );
   }
 
+  if (job.jobType === "SERVER_STRUCTURE_APPLY") {
+    return (
+      Boolean(serverStructureConfig) &&
+      Array.isArray(serverStructureConfig?.categories)
+    );
+  }
+
   return false;
 }
 
@@ -535,7 +564,8 @@ function isDashboardBotJobCompletedPayload(
     (payload.job?.jobType === "VERIFY_PUBLISH" ||
       payload.job?.jobType === "JOIN_MESSAGE_PUBLISH" ||
       payload.job?.jobType === "INFO_PUBLISH" ||
-      payload.job?.jobType === "SERVER_PROFILE_APPLY") &&
+      payload.job?.jobType === "SERVER_PROFILE_APPLY" ||
+      payload.job?.jobType === "SERVER_STRUCTURE_APPLY") &&
     (payload.job.status === "success" || payload.job.status === "failed")
   );
 }
