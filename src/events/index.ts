@@ -2,6 +2,7 @@ import type { Client } from "discord.js";
 
 import type { BotConfig } from "../config/env.js";
 import { registerAutoDeleteMessageCreateEvent } from "../features/autoDelete/autoDelete.js";
+import { registerAutoFaqMessageCreateEvent } from "../features/autoFaq/autoFaq.js";
 import type { BotCommand } from "../types/command.js";
 import { registerGuildLifecycleEvents } from "./guildLifecycle.js";
 import { registerGuildMemberAddEvent } from "./guildMemberAdd.js";
@@ -24,6 +25,7 @@ export function registerEvents(options: RegisterEventsOptions) {
   registerInteractionCreateEvent(options);
   registerMessageReactionAddEvent(options.client, options.config);
   registerAutoDeleteMessageCreateEvent(options.client, options.config);
+  registerAutoFaqMessageCreateEvent(options.client, options.config);
   registerGuildMemberAddEvent(options.client, options.config);
   registerGuildLifecycleEvents(options.client, options.config, options.commands);
 }

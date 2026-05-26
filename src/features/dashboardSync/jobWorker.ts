@@ -3,6 +3,7 @@ import type { Client } from "discord.js";
 import type { BotConfig } from "../../config/env.js";
 import { logger } from "../../utils/logger.js";
 import { publishAutoDeleteConfigForGuild } from "../autoDelete/autoDelete.js";
+import { publishAutoFaqConfigForGuild } from "../autoFaq/autoFaq.js";
 import { publishInfoConfigForGuild } from "../info/infoPublish.js";
 import { publishJoinMessageConfigForGuild } from "../joinMessage/joinMessage.js";
 import { applyServerProfileForGuild } from "../serverProfile/serverProfile.js";
@@ -154,6 +155,12 @@ async function processNextJob(client: Client, config: BotConfig) {
                 client,
                 job.guildId,
                 job.payload.autoDeleteConfig,
+              )
+          : job.jobType === "AUTO_FAQ_PUBLISH" && job.payload.autoFaqConfig
+            ? await publishAutoFaqConfigForGuild(
+                client,
+                job.guildId,
+                job.payload.autoFaqConfig,
               )
           : {
               ok: false as const,

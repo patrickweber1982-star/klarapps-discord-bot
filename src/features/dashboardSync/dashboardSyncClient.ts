@@ -26,6 +26,9 @@ export type DashboardSyncClient = {
   readAutoDeleteConfig(
     guildId: string,
   ): Promise<DashboardInternalReadResult<DashboardAutoDeleteConfigPayload>>;
+  readAutoFaqConfig(
+    guildId: string,
+  ): Promise<DashboardInternalReadResult<DashboardAutoFaqConfigPayload>>;
   readYoutubeNotificationsConfig(
     guildId: string,
   ): Promise<DashboardInternalReadResult<DashboardYoutubeNotificationsConfigPayload>>;
@@ -409,6 +412,36 @@ export type DashboardAutoDeleteConfigPayload = {
 export type DashboardAutoDeleteConfig =
   DashboardAutoDeleteConfigPayload["autoDeleteConfig"];
 
+export type DashboardAutoFaqRuleConfig = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  triggers: string[];
+  answerText: string;
+  channelIds: string[];
+  ignoredRoleIds: string[];
+  cooldownSeconds: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DashboardAutoFaqConfigPayload = {
+  ok: true;
+  mode: "klarbot_auto_faq_config";
+  guildId: string;
+  autoFaqConfig: {
+    guildId: string;
+    enabled: boolean;
+    status: string;
+    publishedAt: string;
+    rules: DashboardAutoFaqRuleConfig[];
+    updatedAt: string;
+  };
+};
+
+export type DashboardAutoFaqConfig =
+  DashboardAutoFaqConfigPayload["autoFaqConfig"];
+
 type DashboardBotJob = {
   id: string;
   jobType:
@@ -423,7 +456,8 @@ type DashboardBotJob = {
     | "ROLE_STRUCTURE_DELETE"
     | "YOUTUBE_NOTIFICATIONS_PUBLISH"
     | "YOUTUBE_NOTIFICATION_TEST"
-    | "AUTO_DELETE_PUBLISH";
+    | "AUTO_DELETE_PUBLISH"
+    | "AUTO_FAQ_PUBLISH";
   status: "processing";
   guildId: string;
   moduleSlug: string | null;
@@ -441,6 +475,7 @@ type DashboardBotJob = {
     youtubeNotificationsConfig?: DashboardYoutubeNotificationsConfig;
     youtubeTestSubscription?: DashboardYoutubeSubscriptionConfig;
     autoDeleteConfig?: DashboardAutoDeleteConfig;
+    autoFaqConfig?: DashboardAutoFaqConfig;
     guildName?: string;
   };
   attempts: number;
@@ -469,7 +504,8 @@ type DashboardBotJobCompletedPayload = {
       | "ROLE_STRUCTURE_DELETE"
       | "YOUTUBE_NOTIFICATIONS_PUBLISH"
       | "YOUTUBE_NOTIFICATION_TEST"
-      | "AUTO_DELETE_PUBLISH";
+      | "AUTO_DELETE_PUBLISH"
+      | "AUTO_FAQ_PUBLISH";
     status: "success" | "failed";
     guildId: string;
     messageId: string | null;
@@ -724,6 +760,27 @@ function isDashboardAutoDeleteConfigPayload(
   );
 }
 
+function isDashboardAutoFaqConfigPayload(
+  value: unknown,
+): value is DashboardAutoFaqConfigPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Partial<DashboardAutoFaqConfigPayload>;
+  const config = payload.autoFaqConfig;
+
+  return (
+    payload.ok === true &&
+    payload.mode === "klarbot_auto_faq_config" &&
+    typeof payload.guildId === "string" &&
+    Boolean(config) &&
+    typeof config?.enabled === "boolean" &&
+    typeof config?.status === "string" &&
+    Array.isArray(config?.rules)
+  );
+}
+
 function isDashboardGuildSnapshotPayload(
   value: unknown,
 ): value is DashboardGuildSnapshotPayload {
@@ -794,6 +851,7 @@ function isDashboardBotJobClaimPayload(
   const youtubeNotificationsConfig = job.payload?.youtubeNotificationsConfig;
   const youtubeTestSubscription = job.payload?.youtubeTestSubscription;
   const autoDeleteConfig = job.payload?.autoDeleteConfig;
+  const autoFaqConfig = job.payload?.autoFaqConfig;
 
   if (
     job.status !== "processing" ||
@@ -902,6 +960,10 @@ function isDashboardBotJobClaimPayload(
     return Boolean(autoDeleteConfig) && Array.isArray(autoDeleteConfig?.rules);
   }
 
+  if (job.jobType === "AUTO_FAQ_PUBLISH") {
+    return Boolean(autoFaqConfig) && Array.isArray(autoFaqConfig?.rules);
+  }
+
   return false;
 }
 
@@ -928,7 +990,8 @@ function isDashboardBotJobCompletedPayload(
       payload.job?.jobType === "ROLE_STRUCTURE_DELETE" ||
       payload.job?.jobType === "YOUTUBE_NOTIFICATIONS_PUBLISH" ||
       payload.job?.jobType === "YOUTUBE_NOTIFICATION_TEST" ||
-      payload.job?.jobType === "AUTO_DELETE_PUBLISH") &&
+      payload.job?.jobType === "AUTO_DELETE_PUBLISH" ||
+      payload.job?.jobType === "AUTO_FAQ_PUBLISH") &&
     (payload.job.status === "success" || payload.job.status === "failed")
   );
 }
@@ -1131,6 +1194,14 @@ export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClie
         `/api/bot/guilds/${encodeURIComponent(guildId)}/auto-delete-config`,
         isDashboardAutoDeleteConfigPayload,
         "Auto-Loeschen-Konfiguration konnte nicht geladen werden.",
+        { requireEnabled: false },
+      );
+    },
+    async readAutoFaqConfig(guildId: string) {
+      return readInternal(
+        `/api/bot/guilds/${encodeURIComponent(guildId)}/auto-faq-config`,
+        isDashboardAutoFaqConfigPayload,
+        "Auto-FAQ-Konfiguration konnte nicht geladen werden.",
         { requireEnabled: false },
       );
     },
