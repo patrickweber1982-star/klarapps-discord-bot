@@ -19,24 +19,6 @@ function isDiscordSnowflake(value: string) {
   return /^\d{8,32}$/.test(value);
 }
 
-function configuredEmoji(value: string | undefined) {
-  const normalized = value?.trim();
-
-  if (!normalized) {
-    return "";
-  }
-
-  const knownEmojis: Record<string, string> = {
-    check: "✅",
-    "thumbs-up": "👍",
-    star: "⭐",
-    lock: "🔒",
-    gaming: "🎮",
-  };
-
-  return knownEmojis[normalized] ?? normalized;
-}
-
 function embedColor(value: string | undefined) {
   const colors: Record<string, number> = {
     "klarapps-teal": 0x14b8a6,
@@ -72,26 +54,14 @@ function optionalBlock(title: string, value: string | undefined) {
 }
 
 function confirmationText(input: {
-  mode: "button" | "emoji";
-  emoji: string;
   buttonLabel: string;
   confirmationHint?: string;
 }) {
   const hint = input.confirmationHint?.trim();
 
-  if (input.mode === "emoji") {
-    return [
-      `Bestaetigung per Emoji vorbereitet: ${
-        configuredEmoji(input.emoji) || "Emoji noch nicht gesetzt"
-      }`,
-      hint,
-    ]
-      .filter(Boolean)
-      .join("\n");
-  }
-
   return [
     `Bestaetigung per Button: ${input.buttonLabel || "Verifizieren"}`,
+    "Ein erneuter Klick entfernt keine Rolle.",
     hint,
   ]
     .filter(Boolean)
@@ -106,8 +76,6 @@ function buildVerifyDescription(verifyConfig: DashboardVerifyConfig) {
     "",
     ...optionalBlock("Channel-Hinweis", verifyConfig.channelHint),
     confirmationText({
-      mode: verifyConfig.confirmationMode,
-      emoji: verifyConfig.confirmationEmoji,
       buttonLabel: verifyConfig.buttonLabel,
       confirmationHint: verifyConfig.confirmationHint,
     }),
@@ -157,6 +125,7 @@ export async function publishVerifyPanelForGuild(
   guildId: string,
   verifyConfig: DashboardVerifyConfig,
   existingMessageId: string | null = null,
+  updateOnly = false,
 ) {
   const guild = await client.guilds.fetch(guildId).catch(() => null);
 
@@ -261,20 +230,9 @@ export async function publishVerifyPanelForGuild(
     `${verifyButtonPrefix}:${guildId}`,
     verifyConfig.buttonLabel || "Verifizieren",
   );
-  const emoji = configuredEmoji(verifyConfig.confirmationEmoji);
-
-  if (emoji) {
-    verifyButton.setEmoji(emoji);
-  }
-
-  const components =
-    verifyConfig.confirmationMode === "button"
-      ? [
-          new ActionRowBuilder<ButtonBuilder>().addComponents(
-            verifyButton,
-          ),
-        ]
-      : [];
+  const components = [
+    new ActionRowBuilder<ButtonBuilder>().addComponents(verifyButton),
+  ];
 
   let messageId: string | null = null;
   const panelPayload = {
@@ -296,6 +254,16 @@ export async function publishVerifyPanelForGuild(
     }
   }
 
+  if (!messageId && updateOnly) {
+    logger.warn(
+      `Verify-Panel konnte nicht aktualisiert werden | guild=${guildId} | channel=${verifyConfig.verifyChannelId} | message=${existingMessageId || "none"} | Nachricht nicht gefunden`,
+    );
+    return {
+      ok: false as const,
+      reason: "message_not_found",
+    };
+  }
+
   if (!messageId) {
     const sentMessage = await channel.send(panelPayload);
     messageId = sentMessage.id;
@@ -304,7 +272,7 @@ export async function publishVerifyPanelForGuild(
     );
   }
 
-  if (verifyConfig.confirmationMode === "button" && "messages" in channel) {
+  if ("messages" in channel) {
     const message = await channel.messages.fetch(messageId).catch(() => null);
 
     if (message) {
@@ -312,31 +280,11 @@ export async function publishVerifyPanelForGuild(
         `${verifyButtonPrefix}:${guildId}:${messageId}`,
         verifyConfig.buttonLabel || "Verifizieren",
       );
-      const emoji = configuredEmoji(verifyConfig.confirmationEmoji);
-
-      if (emoji) {
-        preciseButton.setEmoji(emoji);
-      }
-
       await message.edit({
         embeds: [embed],
         components: [
           new ActionRowBuilder<ButtonBuilder>().addComponents(preciseButton),
         ],
-      });
-    }
-  }
-
-  if (verifyConfig.confirmationMode === "emoji" && "messages" in channel) {
-    const emoji = configuredEmoji(verifyConfig.confirmationEmoji) || "✅";
-    const message = await channel.messages.fetch(messageId).catch(() => null);
-
-    if (message) {
-      await message.react(emoji).catch((error) => {
-        logger.warn(
-          `Verify-Emoji konnte nicht gesetzt werden | guild=${guildId} | message=${messageId}`,
-          error,
-        );
       });
     }
   }

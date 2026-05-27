@@ -52,7 +52,6 @@ const intentEntries = [
   { name: "Guilds", value: GatewayIntentBits.Guilds },
   { name: "GuildMessages", value: GatewayIntentBits.GuildMessages },
   { name: "MessageContent", value: GatewayIntentBits.MessageContent },
-  { name: "GuildMessageReactions", value: GatewayIntentBits.GuildMessageReactions },
   ...(guildMembersIntentEnabled
     ? [{ name: "GuildMembers", value: GatewayIntentBits.GuildMembers }]
     : []),
@@ -90,7 +89,7 @@ logger.info(
 
 const client = new Client({
   intents: intentEntries.map((intent) => intent.value),
-  partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.User],
+  partials: [Partials.Message, Partials.Channel, Partials.User],
 });
 
 startInternalApiServer(client, config);

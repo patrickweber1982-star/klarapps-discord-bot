@@ -20,6 +20,10 @@ export async function handleVerifyButton(
     return false;
   }
 
+  if (interaction.user.bot) {
+    return true;
+  }
+
   if (!interaction.guild) {
     await interaction.reply({
       embeds: [buildWelcomeErrorEmbed("Die Verifizierung ist nur auf einem Discord-Server möglich.")],
@@ -92,6 +96,7 @@ export async function handleVerifyButton(
   });
 
   await interaction.reply({
+    content: result.message,
     embeds: [result.embed],
     ephemeral: true,
   });

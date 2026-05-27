@@ -99,7 +99,7 @@ export async function verifyCommunityMember(
     if (member.roles.cache.has(role.id)) {
       return {
         ok: true,
-        message: "Mitglied war bereits verifiziert.",
+        message: "Du bist bereits verifiziert.",
         embed: buildAlreadyVerifiedEmbed(),
       };
     }

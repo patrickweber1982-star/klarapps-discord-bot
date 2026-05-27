@@ -629,6 +629,7 @@ type DashboardBotJob = {
   messageId: string | null;
   payload: {
     verifyConfig?: DashboardVerifyConfig;
+    verifyUpdateOnly?: boolean;
     ticketConfig?: DashboardTicketConfig;
     joinMessageConfig?: DashboardJoinMessageConfig;
     infoConfig?: DashboardInfoConfig;
