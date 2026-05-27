@@ -545,6 +545,7 @@ export type DashboardStatsChannelConfig = {
   label: string;
   emoji: string;
   discordChannelId: string;
+  visibleRoleId?: string;
   sourceIdentifier: string;
   lastError: string;
   lastValue: string;

@@ -1,4 +1,5 @@
 import {
+  AttachmentBuilder,
   EmbedBuilder,
   PermissionFlagsBits,
   type Client,
@@ -53,10 +54,35 @@ function buildEmbedBlock(block: DashboardInfoBlockConfig) {
   return embed;
 }
 
-function buildImageBlock(block: DashboardInfoBlockConfig) {
-  return new EmbedBuilder()
-    .setColor(embedColor(block.color))
-    .setImage(block.imageUrl.trim());
+function imageAttachmentName(imageUrl: string, index: number) {
+  try {
+    const pathname = new URL(imageUrl).pathname;
+    const filename = pathname.split("/").pop()?.trim() ?? "";
+    const safeName = filename.replace(/[^a-zA-Z0-9._-]+/g, "-");
+
+    if (/\.(png|jpe?g|webp|gif)$/i.test(safeName)) {
+      return safeName;
+    }
+  } catch {
+    // The caller validates the URL; fall back to a stable attachment name.
+  }
+
+  return `info-image-${index}.png`;
+}
+
+async function buildImageAttachment(block: DashboardInfoBlockConfig, index: number) {
+  const imageUrl = block.imageUrl.trim();
+  const response = await fetch(imageUrl);
+
+  if (!response.ok) {
+    throw new Error(`image_fetch_failed_${response.status}`);
+  }
+
+  const bytes = Buffer.from(await response.arrayBuffer());
+
+  return new AttachmentBuilder(bytes, {
+    name: imageAttachmentName(imageUrl, index),
+  });
 }
 
 export async function publishInfoConfigForGuild(
@@ -123,6 +149,22 @@ export async function publishInfoConfigForGuild(
     };
   }
 
+  const publishableImageBlocks = sortedBlocks(infoConfig.blocks).filter(
+    (block) => block.type === "image" && isHttpImageUrl(block.imageUrl),
+  );
+
+  if (
+    publishableImageBlocks.length > 0 &&
+    permissions &&
+    !permissions.has(PermissionFlagsBits.AttachFiles)
+  ) {
+    logger.warn(`[info] publish failed | guildId=${guildId} | reason=missing_attach_files_permission`);
+    return {
+      ok: false as const,
+      reason: "missing_attach_files_permission",
+    };
+  }
+
   let sentBlocks = 0;
 
   for (const [index, block] of sortedBlocks(infoConfig.blocks).entries()) {
@@ -145,8 +187,10 @@ export async function publishInfoConfigForGuild(
         continue;
       }
 
+      const attachment = await buildImageAttachment(block, index + 1);
+
       await channel.send({
-        embeds: [buildImageBlock(block)],
+        files: [attachment],
       });
       sentBlocks += 1;
       continue;

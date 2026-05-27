@@ -21,6 +21,7 @@ import { isSocialStatsType, readSocialStat } from "./socialStatsProviders.js";
 const statsConfigCache = new Map<string, DashboardStatsChannelsConfig>();
 const statsUpdateTimestamps = new Map<string, number>();
 const discordStatsCache = new Map<string, { value: number; expiresAt: number }>();
+const statsChannelAllVisibleValue = "__all__";
 let updaterStarted = false;
 
 function errorMessage(error: unknown) {
@@ -173,8 +174,45 @@ async function resolveStatValue(
   };
 }
 
+function resolveStatsVisibleRoleId(guild: Guild, visibleRoleId: string) {
+  const normalizedRoleId = visibleRoleId.trim();
+
+  if (!normalizedRoleId || normalizedRoleId === statsChannelAllVisibleValue) {
+    return "";
+  }
+
+  const role = guild.roles.cache.get(normalizedRoleId);
+
+  if (!role) {
+    logger.warn(
+      `[stats-channels] visible role missing | guildId=${guild.id} | roleId=${normalizedRoleId}`,
+    );
+    return "";
+  }
+
+  return role.id;
+}
+
+function resolveChannelVisibleRoleId(
+  guild: Guild,
+  channelVisibleRoleId: string | undefined,
+  categoryVisibleRoleId: string | undefined,
+) {
+  if (channelVisibleRoleId === statsChannelAllVisibleValue) {
+    return "";
+  }
+
+  if (channelVisibleRoleId?.trim()) {
+    return resolveStatsVisibleRoleId(guild, channelVisibleRoleId);
+  }
+
+  return resolveStatsVisibleRoleId(guild, categoryVisibleRoleId ?? "");
+}
+
 function categoryPermissionOverwrites(guild: Guild, visibleRoleId: string) {
-  if (!visibleRoleId) return undefined;
+  const resolvedRoleId = resolveStatsVisibleRoleId(guild, visibleRoleId);
+
+  if (!resolvedRoleId) return undefined;
 
   return [
     {
@@ -182,29 +220,45 @@ function categoryPermissionOverwrites(guild: Guild, visibleRoleId: string) {
       deny: [PermissionFlagsBits.ViewChannel],
     },
     {
-      id: visibleRoleId,
+      id: resolvedRoleId,
       allow: [PermissionFlagsBits.ViewChannel],
     },
   ] satisfies OverwriteResolvable[];
 }
 
 function voicePermissionOverwrites(guild: Guild, visibleRoleId: string) {
+  const resolvedRoleId = resolveStatsVisibleRoleId(guild, visibleRoleId);
   const overwrites: OverwriteResolvable[] = [
     {
       id: guild.roles.everyone.id,
-      deny: [PermissionFlagsBits.Connect],
+      deny: resolvedRoleId
+        ? [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect]
+        : [PermissionFlagsBits.Connect],
     },
   ];
 
-  if (visibleRoleId) {
+  if (resolvedRoleId) {
     overwrites.push({
-      id: visibleRoleId,
+      id: resolvedRoleId,
       allow: [PermissionFlagsBits.ViewChannel],
       deny: [PermissionFlagsBits.Connect],
     });
   }
 
   return overwrites;
+}
+
+async function syncStatsChannelPermissions(
+  guild: Guild,
+  channel: GuildBasedChannel,
+  visibleRoleId: string,
+) {
+  if (!("permissionOverwrites" in channel)) return;
+
+  await channel.permissionOverwrites.set(
+    voicePermissionOverwrites(guild, visibleRoleId),
+    "KlarApps Statistikkanal Sichtbarkeit",
+  );
 }
 
 async function ensureCategory(
@@ -322,6 +376,8 @@ async function upsertStatsChannel(input: {
     );
   }
 
+  await syncStatsChannelPermissions(input.guild, channel, input.visibleRoleId);
+
   const failed = Boolean(statValue.lastError);
 
   return {
@@ -407,7 +463,11 @@ async function applyStatsChannelsConfig(input: {
         guild,
         channelConfig: channel,
         categoryChannel: categoryMap.get(channel.categoryId) ?? null,
-        visibleRoleId: category.visibleRoleId,
+        visibleRoleId: resolveChannelVisibleRoleId(
+          guild,
+          channel.visibleRoleId,
+          category.visibleRoleId,
+        ),
         createMissing,
         layoutStyle: statsChannelsConfig.layoutStyle,
       });
