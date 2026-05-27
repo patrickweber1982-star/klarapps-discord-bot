@@ -90,7 +90,9 @@ async function processNextJob(client: Client, config: BotConfig) {
             client,
             job.guildId,
             job.payload.verifyConfig,
-            job.messageId || job.payload.verifyConfig.publishedMessageId || null,
+            job.payload.verifyUpdateOnly
+              ? job.messageId || job.payload.verifyConfig.publishedMessageId || null
+              : null,
             Boolean(job.payload.verifyUpdateOnly),
           )
         : job.jobType === "TICKET_PANEL_PUBLISH" && job.payload.ticketConfig

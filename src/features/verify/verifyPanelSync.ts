@@ -260,7 +260,8 @@ export async function publishVerifyPanelForGuild(
     );
     return {
       ok: false as const,
-      reason: "message_not_found",
+      reason:
+        "Bestehendes Verify-Panel nicht gefunden. Bitte zuerst neu veroeffentlichen.",
     };
   }
 
