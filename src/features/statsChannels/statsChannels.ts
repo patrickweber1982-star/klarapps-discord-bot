@@ -81,13 +81,27 @@ async function readCachedDiscordStat(
 function formatChannelName(
   channel: DashboardStatsChannelConfig,
   value: number | null,
+  layoutStyle: DashboardStatsChannelsConfig["layoutStyle"] = "compact",
 ) {
   const emoji = channel.emoji.trim();
   const label = channel.label.trim() || "Stat";
   const displayValue = value === null ? "--" : formatNumber(value);
-  const name = `${emoji ? `${emoji} ` : ""}${label}: ${displayValue}`;
+  const prefix = emoji ? `${emoji} ` : "";
+  const safeLayout = layoutStyle ?? "compact";
+  const name =
+    safeLayout === "minimal"
+      ? `${prefix}${label} ${displayValue}`
+      : safeLayout === "modern"
+        ? `╭${prefix}${label} ╰ ${displayValue}`
+        : safeLayout === "centered"
+          ? `• ${prefix}${label} • ${displayValue} •`
+          : safeLayout === "separator"
+            ? `━━━━ ${prefix}${label}: ${displayValue}`
+            : safeLayout === "boxed"
+              ? `▣ ${prefix}${label} • ${displayValue}`
+              : `${prefix}${label} • ${displayValue}`;
 
-  return name.slice(0, 100);
+  return name.replace(/[\r\n]+/g, " ").replace(/\s{2,}/g, " ").slice(0, 100);
 }
 
 function isGuildChannel(value: GuildBasedChannel | null | undefined) {
@@ -252,6 +266,7 @@ async function upsertStatsChannel(input: {
   categoryChannel: GuildBasedChannel | null;
   visibleRoleId: string;
   createMissing: boolean;
+  layoutStyle: DashboardStatsChannelsConfig["layoutStyle"];
 }) {
   const statValue = await resolveStatValue(input.guild, input.channelConfig);
   const existingLastValue = Number(input.channelConfig.lastValue);
@@ -259,7 +274,11 @@ async function upsertStatsChannel(input: {
     statValue.value === null && Number.isFinite(existingLastValue)
       ? existingLastValue
       : statValue.value;
-  const targetName = formatChannelName(input.channelConfig, displayValue);
+  const targetName = formatChannelName(
+    input.channelConfig,
+    displayValue,
+    input.layoutStyle,
+  );
   let channel = await resolveStatsChannel(input.guild, input.channelConfig);
   const now = new Date().toISOString();
 
@@ -390,6 +409,7 @@ async function applyStatsChannelsConfig(input: {
         categoryChannel: categoryMap.get(channel.categoryId) ?? null,
         visibleRoleId: category.visibleRoleId,
         createMissing,
+        layoutStyle: statsChannelsConfig.layoutStyle,
       });
 
       nextChannels.push(nextChannel);

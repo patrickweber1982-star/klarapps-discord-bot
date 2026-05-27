@@ -513,6 +513,22 @@ export type DashboardStatsChannelType =
   | "KICK_FOLLOWERS"
   | "X_FOLLOWERS";
 
+export type DashboardStatsChannelLayout =
+  | "compact"
+  | "modern"
+  | "minimal"
+  | "centered"
+  | "separator"
+  | "boxed";
+
+export type DashboardStatsDesignPreset =
+  | "neon-blue"
+  | "neon-purple"
+  | "gaming"
+  | "minimal-dark"
+  | "creator"
+  | "clean-community";
+
 export type DashboardStatsCategoryConfig = {
   id: string;
   name: string;
@@ -562,6 +578,8 @@ export type DashboardStatsChannelsConfigPayload = {
     status: string;
     publishedAt: string;
     updateIntervalMinutes: string;
+    layoutStyle?: DashboardStatsChannelLayout;
+    designPreset?: DashboardStatsDesignPreset;
     categories: DashboardStatsCategoryConfig[];
     channels: DashboardStatsChannelConfig[];
     logs: DashboardStatsChannelLogEntry[];
