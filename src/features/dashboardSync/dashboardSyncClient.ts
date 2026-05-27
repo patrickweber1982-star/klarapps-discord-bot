@@ -62,6 +62,9 @@ export type DashboardSyncClient = {
   reportAutoFaqEvent(input: DashboardAutoFaqEventInput): Promise<
     DashboardInternalReadResult<DashboardAutoFaqEventPayload>
   >;
+  reportStatsChannelsStatus(input: DashboardStatsChannelsStatusInput): Promise<
+    DashboardInternalReadResult<DashboardStatsChannelsStatusPayload>
+  >;
   claimNextBotJob(): Promise<
     DashboardInternalReadResult<DashboardBotJobClaimPayload>
   >;
@@ -528,10 +531,25 @@ export type DashboardStatsChannelConfig = {
   discordChannelId: string;
   sourceIdentifier: string;
   lastError: string;
+  lastValue: string;
+  lastUpdateAt: string;
+  lastSuccessAt: string;
+  lastErrorAt: string;
+  lastErrorMessage: string;
+  updateStatus: "idle" | "updating" | "success" | "error" | "disabled";
   enabled: boolean;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+};
+
+export type DashboardStatsChannelLogEntry = {
+  id: string;
+  channelId: string;
+  type: DashboardStatsChannelType;
+  status: "success" | "error" | "skipped";
+  message: string;
+  createdAt: string;
 };
 
 export type DashboardStatsChannelsConfigPayload = {
@@ -546,12 +564,27 @@ export type DashboardStatsChannelsConfigPayload = {
     updateIntervalMinutes: string;
     categories: DashboardStatsCategoryConfig[];
     channels: DashboardStatsChannelConfig[];
+    logs: DashboardStatsChannelLogEntry[];
     updatedAt: string;
   };
 };
 
 export type DashboardStatsChannelsConfig =
   DashboardStatsChannelsConfigPayload["statsChannelsConfig"];
+
+type DashboardStatsChannelsStatusInput = {
+  guildId: string;
+  channelUpdates: Array<Partial<DashboardStatsChannelConfig> & { id: string }>;
+  logs: DashboardStatsChannelLogEntry[];
+};
+
+type DashboardStatsChannelsStatusPayload = {
+  ok: true;
+  mode: "klarbot_stats_channels_status";
+  guildId: string;
+  updatedChannels: number;
+  storedLogs: number;
+};
 
 type DashboardBotJob = {
   id: string;
@@ -972,6 +1005,24 @@ function isDashboardAutoFaqEventPayload(
     typeof payload.event?.faqRuleId === "string" &&
     typeof payload.event?.eventType === "string" &&
     typeof payload.event?.success === "boolean"
+  );
+}
+
+function isDashboardStatsChannelsStatusPayload(
+  value: unknown,
+): value is DashboardStatsChannelsStatusPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Partial<DashboardStatsChannelsStatusPayload>;
+
+  return (
+    payload.ok === true &&
+    payload.mode === "klarbot_stats_channels_status" &&
+    typeof payload.guildId === "string" &&
+    typeof payload.updatedChannels === "number" &&
+    typeof payload.storedLogs === "number"
   );
 }
 
@@ -1490,6 +1541,18 @@ export function createDashboardSyncClient(_config: BotConfig): DashboardSyncClie
         },
         isDashboardAutoFaqEventPayload,
         "Dashboard-Sync konnte das Auto-FAQ-Event nicht speichern.",
+      );
+    },
+    async reportStatsChannelsStatus(input) {
+      return postInternal(
+        "/api/bot/stats-channels/status",
+        {
+          guildId: input.guildId,
+          channelUpdates: input.channelUpdates,
+          logs: input.logs,
+        },
+        isDashboardStatsChannelsStatusPayload,
+        "Dashboard-Sync konnte den Statistikkanal-Status nicht speichern.",
       );
     },
     async claimNextBotJob() {

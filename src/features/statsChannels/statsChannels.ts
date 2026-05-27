@@ -12,6 +12,7 @@ import { logger } from "../../utils/logger.js";
 import {
   createDashboardSyncClient,
   type DashboardStatsChannelConfig,
+  type DashboardStatsChannelLogEntry,
   type DashboardStatsChannelsConfig,
   type DashboardStatsChannelType,
 } from "../dashboardSync/dashboardSyncClient.js";
@@ -19,6 +20,7 @@ import { isSocialStatsType, readSocialStat } from "./socialStatsProviders.js";
 
 const statsConfigCache = new Map<string, DashboardStatsChannelsConfig>();
 const statsUpdateTimestamps = new Map<string, number>();
+const discordStatsCache = new Map<string, { value: number; expiresAt: number }>();
 let updaterStarted = false;
 
 function errorMessage(error: unknown) {
@@ -35,6 +37,45 @@ function readIntervalMinutes(value: string | undefined) {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("de-DE").format(value);
+}
+
+function statsLog(input: {
+  channel: DashboardStatsChannelConfig;
+  status: DashboardStatsChannelLogEntry["status"];
+  message: string;
+}): DashboardStatsChannelLogEntry {
+  return {
+    id: `stats-log-${Date.now()}-${input.channel.id}`,
+    channelId: input.channel.id,
+    type: input.channel.type,
+    status: input.status,
+    message: input.message,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function cacheKey(guildId: string, type: DashboardStatsChannelType) {
+  return `${guildId}:${type}`;
+}
+
+async function readCachedDiscordStat(
+  guild: Guild,
+  type: DashboardStatsChannelType,
+) {
+  const key = cacheKey(guild.id, type);
+  const cached = discordStatsCache.get(key);
+
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
+  }
+
+  const value = await computeStatValue(guild, type);
+  discordStatsCache.set(key, {
+    value,
+    expiresAt: Date.now() + 5 * 60 * 1000,
+  });
+
+  return value;
 }
 
 function formatChannelName(
@@ -113,7 +154,7 @@ async function resolveStatValue(
   }
 
   return {
-    value: await computeStatValue(guild, channel.type),
+    value: await readCachedDiscordStat(guild, channel.type),
     lastError: "",
   };
 }
@@ -213,8 +254,14 @@ async function upsertStatsChannel(input: {
   createMissing: boolean;
 }) {
   const statValue = await resolveStatValue(input.guild, input.channelConfig);
-  const targetName = formatChannelName(input.channelConfig, statValue.value);
+  const existingLastValue = Number(input.channelConfig.lastValue);
+  const displayValue =
+    statValue.value === null && Number.isFinite(existingLastValue)
+      ? existingLastValue
+      : statValue.value;
+  const targetName = formatChannelName(input.channelConfig, displayValue);
   let channel = await resolveStatsChannel(input.guild, input.channelConfig);
+  const now = new Date().toISOString();
 
   if (!channel && !input.createMissing) {
     logger.warn(
@@ -223,7 +270,11 @@ async function upsertStatsChannel(input: {
     return {
       ...input.channelConfig,
       discordChannelId: "",
-      lastError: statValue.lastError,
+      lastError: "channel_missing",
+      lastUpdateAt: now,
+      lastErrorAt: now,
+      lastErrorMessage: "Discord Channel wurde nicht gefunden.",
+      updateStatus: "error" as const,
     };
   }
 
@@ -241,17 +292,29 @@ async function upsertStatsChannel(input: {
     logger.info(
       `[stats-channels] channel created | guildId=${input.guild.id} | type=${input.channelConfig.type} | requestedName=${targetName} | createdName=${channel.name} | channelId=${channel.id}`,
     );
-  } else if ("setName" in channel && channel.name !== targetName) {
+  } else if (
+    "setName" in channel &&
+    channel.name !== targetName &&
+    (statValue.value !== null || !input.channelConfig.lastValue)
+  ) {
     await channel.setName(targetName, "KlarApps Statistikkanal Update");
     logger.info(
       `[stats-channels] channel updated | guildId=${input.guild.id} | type=${input.channelConfig.type} | channelId=${channel.id} | name=${targetName}`,
     );
   }
 
+  const failed = Boolean(statValue.lastError);
+
   return {
     ...input.channelConfig,
     discordChannelId: channel.id,
     lastError: statValue.lastError,
+    lastValue: statValue.value === null ? input.channelConfig.lastValue : String(statValue.value),
+    lastUpdateAt: now,
+    lastSuccessAt: failed ? input.channelConfig.lastSuccessAt : now,
+    lastErrorAt: failed ? now : "",
+    lastErrorMessage: failed ? statValue.lastError : "",
+    updateStatus: failed ? ("error" as const) : ("success" as const),
   };
 }
 
@@ -306,13 +369,17 @@ async function applyStatsChannelsConfig(input: {
     statsChannelsConfig.categories.map((category) => [category.id, category]),
   );
   const nextChannels: DashboardStatsChannelConfig[] = [];
+  const logs: DashboardStatsChannelLogEntry[] = [];
   let updatedChannels = 0;
 
   for (const channel of statsChannelsConfig.channels) {
     const category = categoriesById.get(channel.categoryId);
 
     if (!channel.enabled || !category?.enabled) {
-      nextChannels.push(channel);
+      nextChannels.push({
+        ...channel,
+        updateStatus: "disabled",
+      });
       continue;
     }
 
@@ -327,11 +394,36 @@ async function applyStatsChannelsConfig(input: {
 
       nextChannels.push(nextChannel);
       updatedChannels += 1;
+      logs.push(
+        statsLog({
+          channel,
+          status: nextChannel.updateStatus === "error" ? "error" : "success",
+          message:
+            nextChannel.updateStatus === "error"
+              ? nextChannel.lastErrorMessage || "Update fehlgeschlagen."
+              : `Aktualisiert: ${nextChannel.lastValue || "0"}`,
+        }),
+      );
     } catch (error) {
       logger.warn(
         `[stats-channels] channel update failed | guildId=${guildId} | stat=${channel.type} | reason=${errorMessage(error)}`,
       );
-      nextChannels.push(channel);
+      const now = new Date().toISOString();
+      nextChannels.push({
+        ...channel,
+        lastUpdateAt: now,
+        lastErrorAt: now,
+        lastErrorMessage: errorMessage(error),
+        lastError: errorMessage(error),
+        updateStatus: "error",
+      });
+      logs.push(
+        statsLog({
+          channel,
+          status: "error",
+          message: errorMessage(error),
+        }),
+      );
     }
   }
 
@@ -339,6 +431,7 @@ async function applyStatsChannelsConfig(input: {
     ...statsChannelsConfig,
     enabled: true,
     channels: nextChannels,
+    logs: [...logs, ...statsChannelsConfig.logs].slice(0, 100),
   };
   statsConfigCache.set(guildId, nextConfig);
   statsUpdateTimestamps.set(guildId, Date.now());
@@ -351,6 +444,8 @@ async function applyStatsChannelsConfig(input: {
     ok: true as const,
     channelId: null,
     statsChannelsConfig: nextConfig,
+    channelUpdates: nextChannels,
+    logs,
   };
 }
 
@@ -409,6 +504,8 @@ export function startStatsChannelsUpdater(client: Client, config: BotConfig) {
   logger.info(`[stats-channels] updater active | intervalMs=${intervalMs}`);
 
   const run = async () => {
+    const syncClient = createDashboardSyncClient(config);
+
     for (const guild of client.guilds.cache.values()) {
       try {
         const statsConfig = await loadActiveStatsChannelsConfig(guild.id, config);
@@ -424,12 +521,26 @@ export function startStatsChannelsUpdater(client: Client, config: BotConfig) {
           continue;
         }
 
-        await applyStatsChannelsConfig({
+        const result = await applyStatsChannelsConfig({
           client,
           guildId: guild.id,
           statsChannelsConfig: statsConfig,
           createMissing: false,
         });
+
+        if (result.ok) {
+          const report = await syncClient.reportStatsChannelsStatus({
+            guildId: guild.id,
+            channelUpdates: result.channelUpdates,
+            logs: result.logs,
+          });
+
+          if (!report.ok) {
+            logger.warn(
+              `[stats-channels] status report failed | guildId=${guild.id} | reason=${report.message}`,
+            );
+          }
+        }
       } catch (error) {
         logger.warn(
           `[stats-channels] updater failed | guildId=${guild.id} | reason=${errorMessage(error)}`,
