@@ -501,7 +501,14 @@ export type DashboardStatsChannelType =
   | "BOTS_TOTAL"
   | "ROLES_TOTAL"
   | "CHANNELS_TOTAL"
-  | "BOOSTS_TOTAL";
+  | "BOOSTS_TOTAL"
+  | "YOUTUBE_SUBSCRIBERS"
+  | "YOUTUBE_VIEWS"
+  | "TWITCH_FOLLOWERS"
+  | "TIKTOK_FOLLOWERS"
+  | "INSTAGRAM_FOLLOWERS"
+  | "KICK_FOLLOWERS"
+  | "X_FOLLOWERS";
 
 export type DashboardStatsCategoryConfig = {
   id: string;
@@ -519,6 +526,8 @@ export type DashboardStatsChannelConfig = {
   label: string;
   emoji: string;
   discordChannelId: string;
+  sourceIdentifier: string;
+  lastError: string;
   enabled: boolean;
   sortOrder: number;
   createdAt: string;

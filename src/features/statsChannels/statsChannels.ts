@@ -15,6 +15,7 @@ import {
   type DashboardStatsChannelsConfig,
   type DashboardStatsChannelType,
 } from "../dashboardSync/dashboardSyncClient.js";
+import { isSocialStatsType, readSocialStat } from "./socialStatsProviders.js";
 
 const statsConfigCache = new Map<string, DashboardStatsChannelsConfig>();
 const statsUpdateTimestamps = new Map<string, number>();
@@ -32,10 +33,18 @@ function readIntervalMinutes(value: string | undefined) {
   return Math.min(30, Math.max(10, parsed));
 }
 
-function formatChannelName(channel: DashboardStatsChannelConfig, value: number) {
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("de-DE").format(value);
+}
+
+function formatChannelName(
+  channel: DashboardStatsChannelConfig,
+  value: number | null,
+) {
   const emoji = channel.emoji.trim();
   const label = channel.label.trim() || "Stat";
-  const name = `${emoji ? `${emoji} ` : ""}${label}: ${value}`;
+  const displayValue = value === null ? "--" : formatNumber(value);
+  const name = `${emoji ? `${emoji} ` : ""}${label}: ${displayValue}`;
 
   return name.slice(0, 100);
 }
@@ -75,6 +84,38 @@ async function computeStatValue(guild: Guild, type: DashboardStatsChannelType) {
   }
 
   return guild.premiumSubscriptionCount ?? 0;
+}
+
+async function resolveStatValue(
+  guild: Guild,
+  channel: DashboardStatsChannelConfig,
+): Promise<{ value: number | null; lastError: string }> {
+  if (isSocialStatsType(channel.type)) {
+    const result = await readSocialStat({
+      type: channel.type,
+      sourceIdentifier: channel.sourceIdentifier,
+    });
+
+    if (!result.ok) {
+      logger.warn(
+        `[stats-channels] social stat unavailable | guildId=${guild.id} | type=${channel.type} | source=${channel.sourceIdentifier || "missing"} | reason=${result.reason}`,
+      );
+      return {
+        value: null,
+        lastError: result.reason,
+      };
+    }
+
+    return {
+      value: result.value,
+      lastError: "",
+    };
+  }
+
+  return {
+    value: await computeStatValue(guild, channel.type),
+    lastError: "",
+  };
 }
 
 function categoryPermissionOverwrites(guild: Guild, visibleRoleId: string) {
@@ -171,8 +212,8 @@ async function upsertStatsChannel(input: {
   visibleRoleId: string;
   createMissing: boolean;
 }) {
-  const value = await computeStatValue(input.guild, input.channelConfig.type);
-  const targetName = formatChannelName(input.channelConfig, value);
+  const statValue = await resolveStatValue(input.guild, input.channelConfig);
+  const targetName = formatChannelName(input.channelConfig, statValue.value);
   let channel = await resolveStatsChannel(input.guild, input.channelConfig);
 
   if (!channel && !input.createMissing) {
@@ -182,6 +223,7 @@ async function upsertStatsChannel(input: {
     return {
       ...input.channelConfig,
       discordChannelId: "",
+      lastError: statValue.lastError,
     };
   }
 
@@ -209,6 +251,7 @@ async function upsertStatsChannel(input: {
   return {
     ...input.channelConfig,
     discordChannelId: channel.id,
+    lastError: statValue.lastError,
   };
 }
 
